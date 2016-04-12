@@ -1,0 +1,49 @@
+#include <stdio.h>;
+
+char* prompt = "\n> ";
+char comm[100];
+int menuloop(){
+  printf("%s %s"welcome, prompt);
+
+
+  //0 exit
+  //-1 error
+  //1 help
+  //2 print local
+  //3 print remote
+  //4 change local
+  //5 change remote
+  scanf(%s, comm);
+
+  while( 0 < parse(comm) )
+    switch( parse(comm) ) {
+    case 0:
+      return 0;
+      break;
+    case -1:
+      return -1;
+      break;
+    case 1: //display help
+      printf("%s",help);
+      break;
+    case 2: // display local
+      printf("%s",local);
+      break;
+    case 3: //display remote
+      printf("%s",remote);
+      break;
+    case 4: //change local
+      printf("Old local: %s",local);
+      printf("\n Enter new local %s",prompt);
+      scanf("%s",local);
+      printf("New local: %s",local);
+      break;
+    case 5: //change remote
+      printf("Old remote: %s",remote);
+      printf("\n Enter new remote %s",prompt);
+      scanf("%s",remote);
+      printf("New remote: %s",remote);
+      break;
+    case 6: //push single
+      
+      
