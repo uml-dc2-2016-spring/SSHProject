@@ -1,13 +1,17 @@
 #include <stdio.h>
 #include <string.h>
 
+char* help = "Commands:\nexit\t quit\nhelp\t this help message\ndispl\t display local path (if not home)\ndispr\t display remote path (if not home)\ncdl\t change  local path\ncdr\t change remote path\npushs\t push single file\npulls\t pull single file\nrun\t execute frequent command\n";
+
+char* welcome = "Welcome to SSHProject.  'help' for help.\n";
+
 char* prompt = "\n> ";
-int menuloop(char* name, char* pass, char* *command){
+int menuloop(char* name, char pass[100], char* command[100]){
   char comm[100];
   char fname[100];
   char local[200]={"\0"};
-  char remote[200]={"\0")};
-  printf("%s %s"welcome, prompt);
+  char remote[200]={"\0"};
+  printf("%s %s",welcome, prompt);
 
 
   //0 exit
@@ -17,7 +21,7 @@ int menuloop(char* name, char* pass, char* *command){
   //3 print remote
   //4 change local
   //5 change remote
-  scanf(%s, comm);
+  scanf("%s", comm);
 
   while( 0 < parse(comm) ){
     switch( parse(comm) ) {
@@ -61,7 +65,7 @@ int menuloop(char* name, char* pass, char* *command){
     case 8: // run command
       do_command(*command);
       break;
-    case default:
+    default:
       printf("oops");
       return -1;
     }
@@ -89,15 +93,3 @@ int parse(char* input){
   return -1;
 }
 
-char* help = "Commands:\n
-exit\t quit\n
-help\t this help message\n
-displ\t display local path (if not home)\n
-dispr\t display remote path (if not home)\n
-cdl\t change  local path\n
-cdr\t change remote path\n
-pushs\t push single file\n
-pulls\t pull single file\n
-run\t execute frequent command\n";
-
-char* welcome = "Welcome to SSHProject.  'help' for help.\n";

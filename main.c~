@@ -1,6 +1,6 @@
 //#include "SFTPencaps.c"
 //#include "SSHencaps.c"
-#include "conntest.c"
+//#include "conntest.c"
 #include "menuloop.c"
 
 int main(){
@@ -15,7 +15,7 @@ int main(){
   printf("Enter password\n> ");
   scanf("%s",pass);
 
-
+  /*
   //test connection
   printf("Attempting to connect");
   if( 0 > testconnection() )
@@ -24,7 +24,7 @@ int main(){
     }
   else
     printf("succeeded\n");
-
+  */
   //get common command
   printf("Enter commonly used command\n> ");
   scanf("%s",command);
