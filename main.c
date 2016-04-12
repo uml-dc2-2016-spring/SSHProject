@@ -40,4 +40,16 @@ int main(){
 
 
 int auth_ssh(char name[],char pass[],ssh_session* new_ses){
-  return 1;}
+  int rc;
+  ssh_options_set(&new_ses, SSH_OPTIONS_HOST, name);
+  rc = ssh_userauth_password(&new_ses, NULL, pass);
+  
+  if (rc != SSH_AUTH_SUCCESS) {
+    fprintf(stderr, "Error authenticating with password: %s\n",
+            ssh_get_error(&new_ses));
+    ssh_disconnect(&new_ses);
+    ssh_free(&new_ses);
+    exit(-1);
+  }
+  return rc;
+}
