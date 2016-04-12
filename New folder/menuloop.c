@@ -2,9 +2,11 @@
 #include <string.h>
 
 char* prompt = "\n> ";
-char comm[100];
-char fname[100];
-int menuloop(){
+int menuloop(char* name, char* pass, char* *command){
+  char comm[100];
+  char fname[100];
+  char local[200]={"\0"};
+  char remote[200]={"\0")};
   printf("%s %s"welcome, prompt);
 
 
@@ -23,7 +25,7 @@ int menuloop(){
       return 0;
       break;
     case -1:
-      return -1;
+      printf("Not recognized %s",prompt);
       break;
     case 1: //display help
       printf("%s",help);
@@ -57,7 +59,7 @@ int menuloop(){
       pull_single(local, remote, fname);
       break;
     case 8: // run command
-      do_command();
+      do_command(*command);
       break;
     case default:
       printf("oops");
