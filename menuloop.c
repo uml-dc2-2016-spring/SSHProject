@@ -4,13 +4,50 @@
 #include <libssh/sftp.h>
 
 //to move to new file
-int push_single(char local[],char remote[],char fname[],sftp_session ses);
+#include <sys/stat.h>
+#include <fcntl.h>
+#define BUFFER_SIZE 1000
+int push_single(char local[],char remote[],char fname[],ssh_session sshses,sftp_session ses);
 
-int push_single(char local[],char remote[],char fname[],sftp_session ses){
-  return 1;}
-int pull_single(char local[],char remote[],char fname[],sftp_session ses);
+int push_single(char local[],char remote[],char fname[],ssh_session sshses,sftp_session sftpses){
+  sftp_file rfile;
+  int access_type = O_WRONLY | O_CREAT | O_TRUNC;
+  int rc, nwrite, nread;
+  rc = 0;
+  char buffer[BUFFER_SIZE];
+  //open local file
+  FILE* lfile = fopen(fname,"r");
+  if( lfile == NULL){
+    perror("local file cannot open");
+    return -1;}
+  //open remote file
+  rfile = sftp_open(sftpses,fname,access_type,S_IRWXU);
+  if (rfile == NULL)
+  {
+    fprintf(stderr, "Can't open file for writing: %s\n",
+            ssh_get_error(sshses));
+    return SSH_ERROR;
+  }
 
-int pull_single(char local[],char remote[],char fname[],sftp_session ses){
+  //loop it
+  do{
+    nread = fread( buffer, sizeof(char),BUFFER_SIZE,lfile);
+    nwrite = sftp_write(rfile,buffer,nread);
+  }while( (nread == nwrite) && (nread == BUFFER_SIZE) );
+  if( nread != nwrite)
+    fprintf(stderr, "Can't write data to remote file %s\n",
+	    ssh_get_error(sshses));
+  rc = sftp_close(rfile);
+  fclose(lfile);
+  if( rc != SSH_OK )
+    fprintf(stderr, "Can't close the written file %s\n",
+	    ssh_get_error(sshses));
+  return rc;
+}
+
+int pull_single(char local[],char remote[],char fname[],ssh_session sshses,sftp_session ftpses);
+
+int pull_single(char local[],char remote[],char fname[],ssh_session sshses,sftp_session ses){
   return 1;}
 int do_command(char command[],ssh_session myssh);
 int do_command(char command[],ssh_session myssh){
@@ -76,12 +113,12 @@ int menuloop(char name[100], char pass[100],ssh_session myssh,sftp_session mysft
     case 6: //push single
       printf("Enter file name %s",prompt);
       scanf("%s",fname);
-      push_single(local, remote, fname,mysftp);
+      push_single(local, remote, fname,myssh,mysftp);
       break;
     case 7: //pull single
       printf("Enter file name %s",prompt);
       scanf("%s",fname);
-      pull_single(local, remote, fname,mysftp);
+      pull_single(local, remote, fname,myssh, mysftp);
       break;
     case 8: // run command
       do_command(command,myssh);

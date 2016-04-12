@@ -1,7 +1,14 @@
+#include <stdlib.h>
+#include <stdio.h>
 //#include "SFTPencaps.c"
 //#include "SSHencaps.c"
 //#include "conntest.c"
 #include "menuloop.c"
+//#include  "libssh/sftp.h"
+#include <libssh/libssh.h>
+//#include "libssh/legacy.h"
+
+int auth_ssh(char name[],char pass[],ssh_session* new_ses);
 
 int main(){
   char name[100];//name@remote.domain
@@ -15,21 +22,11 @@ int main(){
   printf("Enter password\n> ");
   scanf("%s",pass);
 
-  /*
-  //test connection
-  printf("Attempting to connect");
-  if( 0 > testconnection() )
-    { printf("failed");
-      return 1;
-    }
-  else
-    printf("succeeded\n");
-  */
-  //get common command
-  printf("Enter commonly used command\n> ");
-  scanf("%s",command);
+  ssh_session myssh;
+  auth_ssh(name,pass,&myssh);
+  sftp_session mysftp;
 
-  if( 0 > menuloop(name,pass,&command) )
+  if( 0 > menuloop(name,pass,myssh, mysftp) )
     {
       printf("\nerror\n");
       return 1;
@@ -39,4 +36,20 @@ int main(){
       printf("\nBye\n");
       return 0;
     }
+}
+
+
+int auth_ssh(char name[],char pass[],ssh_session* new_ses){
+  int rc;
+  ssh_options_set(&new_ses, SSH_OPTIONS_HOST, name);
+  rc = ssh_userauth_password(&new_ses, NULL, pass);
+  
+  if (rc != SSH_AUTH_SUCCESS) {
+    fprintf(stderr, "Error authenticating with password: %s\n",
+            ssh_get_error(&new_ses));
+    ssh_disconnect(&new_ses);
+    ssh_free(&new_ses);
+    exit(-1);
+  }
+  return rc;
 }
