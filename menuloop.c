@@ -21,7 +21,7 @@ int push_single(char local[],char remote[],char fname[],ssh_session sshses,sftp_
     perror("local file cannot open");
     return -1;}
   //open remote file
-  rfile = sftp_open(sftpses,fname,access_type,S_IRWXU);
+  rfile = sftp_open(sftpses,fname,access_type,-1);
   if (rfile == NULL)
   {
     fprintf(stderr, "Can't open file for writing: %s\n",
