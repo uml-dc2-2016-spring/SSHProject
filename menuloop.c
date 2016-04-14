@@ -7,7 +7,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #define BUFFER_SIZE 1000
-int push_single(char local[],char remote[],char fname[],ssh_session sshses,sftp_session ses);
+int push_single(char local[],char remote[],char fname[],ssh_session sshses,sftp_session sftpses);
 
 int push_single(char local[],char remote[],char fname[],ssh_session sshses,sftp_session sftpses){
   sftp_file rfile;
@@ -16,7 +16,7 @@ int push_single(char local[],char remote[],char fname[],ssh_session sshses,sftp_
   rc = 0;
   char buffer[BUFFER_SIZE];
   //open local file
-  FILE* lfile = fopen(fname,"r");
+  FILE* lfile = fopen(fname,"rb");
   if( lfile == NULL){
     perror("local file cannot open");
     return -1;}
@@ -45,15 +45,134 @@ int push_single(char local[],char remote[],char fname[],ssh_session sshses,sftp_
   return rc;
 }
 
-int pull_single(char local[],char remote[],char fname[],ssh_session sshses,sftp_session ftpses);
+int pull_single(char local[],char remote[],char fname[],ssh_session sshses,sftp_session sftpses);
 
-int pull_single(char local[],char remote[],char fname[],ssh_session sshses,sftp_session ses){
-  return 1;}
+int pull_single(char local[],char remote[],char fname[],ssh_session sshses,sftp_session sftpses){
+  sftp_file rfile;//remote file
+  int access_type = O_RDONLY;
+  int rc, nwrite, nread;//return code, #byte written, #byte read
+  rc = 0;
+  char buffer[BUFFER_SIZE];
+  //open remote file
+  rfile = sftp_open(sftpses,fname,access_type,0);
+  if (rfile == NULL)
+    {
+    fprintf(stderr, "Can't open file for writing: %s\n",
+            ssh_get_error(sshses));
+    return SSH_ERROR;
+  }
+  //open local file
+  FILE* lfile = fopen(fname,"wb");
+  if( lfile == NULL){
+    perror("local file cannot open");
+    return -1;}
+  //loop it
+  do{
+    nread = sftp_read(rfile,buffer,sizeof(buffer));
+    nwrite = fwrite( buffer, 1 , nread, lfile );
+    //nwrite = fwrite( buffer, sizeof(char),BUFFER_SIZE,lfile);
+  }while( (nread == nwrite) && (nwrite == BUFFER_SIZE) );
+  if( nread != nwrite)
+    fprintf(stderr, "Can't write data to local file %s\n",
+	    ssh_get_error(sshses));
+  rc = sftp_close(rfile);
+  fclose(lfile);
+  if( rc != SSH_OK )
+    fprintf(stderr, "Can't close the remote file %s\n",
+	    ssh_get_error(sshses));
+  return rc;
+}
+
 int do_command(char command[],ssh_session myssh);
 int do_command(char command[],ssh_session myssh){
-  return 1;}
+  ssh_channel channel;
+  int rc;
+  char buffer[256];
+  int nbytes;
+  channel = ssh_channel_new(myssh);
+  if (channel == NULL)
+    return SSH_ERROR;
+  rc = ssh_channel_open_session(channel);
+  if (rc != SSH_OK)
+  {
+    ssh_channel_free(channel);
+    return rc;
+  }
+  rc = ssh_channel_request_exec(channel, command);
+  if (rc != SSH_OK)
+  {
+    ssh_channel_close(channel);
+    ssh_channel_free(channel);
+    return rc;
+  }
+  nbytes = ssh_channel_read(channel, buffer, sizeof(buffer), 0);
+  while (nbytes > 0)
+  {
+    if (write(1, buffer, nbytes) != (unsigned int) nbytes)
+    {
+      ssh_channel_close(channel);
+      ssh_channel_free(channel);
+      return SSH_ERROR;
+    }
+    nbytes = ssh_channel_read(channel, buffer, sizeof(buffer), 0);
+  }
+    
+  if (nbytes < 0)
+    {
+    ssh_channel_close(channel);
+    ssh_channel_free(channel);
+    return SSH_ERROR;
+  }
+  ssh_channel_send_eof(channel);
+  ssh_channel_close(channel);
+  ssh_channel_free(channel);
+  return SSH_OK;
+}
 
-char* help = "Commands:\nexit\t quit\nhelp\t this help message\ndispl\t display local path (if not home)\ndispr\t display remote path (if not home)\ncdl\t change  local path\ncdr\t change remote path\npushs\t push single file\npulls\t pull single file\nrun\t execute frequent command\n";
+int list_remote_stuff(char path[], ssh_session sshses, sftp_session sftpses);
+
+int list_remote_stuff(char path[], ssh_session sshses, sftp_session sftpses){
+  sftp_dir dir;
+  sftp_attributes attributes;
+  int rc;
+  //dir = sftp_opendir(sftpses, path);
+  dir = sftp_opendir(sftpses, "");
+  if (!dir)
+  {
+    fprintf(stderr, "Directory not opened: %s\n",
+            ssh_get_error(sshses));
+    return SSH_ERROR;
+  }
+  printf("Name                       Size Perms    Owner\tGroup\n");
+  while ((attributes = sftp_readdir(sftpses, dir)) != NULL)
+  {
+    printf("%-20s %10llu %.8o %s(%d)\t%s(%d)\n",
+     attributes->name,
+     (long long unsigned int) attributes->size,
+     attributes->permissions,
+     attributes->owner,
+     attributes->uid,
+     attributes->group,
+     attributes->gid);
+     sftp_attributes_free(attributes);
+  }
+  if (!sftp_dir_eof(dir))
+  {
+    fprintf(stderr, "Can't list directory: %s\n",
+            ssh_get_error(sshses));
+    sftp_closedir(dir);
+    return SSH_ERROR;
+  }
+  rc = sftp_closedir(dir);
+  if (rc != SSH_OK)
+  {
+    fprintf(stderr, "Can't close directory: %s\n",
+            ssh_get_error(sshses));
+    return rc;
+  }
+}
+
+char* help = "Commands:\nexit\t quit\nhelp\t this help message\ndispl\t display local path (if not home)\ndispr\t display remote path (if not home)\ncdl\t change  local path\ncdr\t change remote path\npushs\t push single file\npulls\t pull single file\nrun\t execute frequent command\nlsr\t list remote stuff";
 
 char* welcome = "Welcome to SSHProject.  'help' for help.\n";
 
@@ -92,19 +211,19 @@ int menuloop(char name[100], char pass[100],ssh_session myssh,sftp_session mysft
     case 1: //display help
       printf("%s",help);
       break;
-    case 2: // display local
+    case 2: // display local path
       printf("%s",local);
       break;
-    case 3: //display remote
+    case 3: //display remote path
       printf("%s",remote);
       break;
-    case 4: //change local
+    case 4: //change local path
       printf("Old local: %s",local);
       printf("\n Enter new local %s",prompt);
       scanf("%s",local);
       printf("New local: %s",local);
       break;
-    case 5: //change remote
+    case 5: //change remote path
       printf("Old remote: %s",remote);
       printf("\n Enter new remote %s",prompt);
       scanf("%s",remote);
@@ -120,8 +239,11 @@ int menuloop(char name[100], char pass[100],ssh_session myssh,sftp_session mysft
       scanf("%s",fname);
       pull_single(local, remote, fname,myssh, mysftp);
       break;
-    case 8: // run command
+    case 8: // run command on remote
       do_command(command,myssh);
+      break;
+    case 9:
+      list_remote_stuff(remote,myssh,mysftp);
       break;
     default:
       printf("oops");
@@ -135,8 +257,8 @@ int menuloop(char name[100], char pass[100],ssh_session myssh,sftp_session mysft
 }
 
 //for parsing user input
-#define NUMWORDS 9
-char* words[NUMWORDS] = {"exit","help","displ","dispr","cdl","cdr","pushs","pulls","run"};
+#define NUMWORDS 10
+char* words[NUMWORDS] = {"exit","help","displ","dispr","cdl","cdr","pushs","pulls","run","lsr"};
 
 int parse(char* input){
   int index = 0;
