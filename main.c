@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 //#include "SFTPencaps.c"
 //#include "SSHencaps.c"
 //#include "conntest.c"
@@ -116,65 +117,92 @@ int auth_ssh(char name[],char pass[],ssh_session* new_ses){
 
 int verify_knownhost(ssh_session session)
 {
-  int state, hlen;
+  /*int state, hlen;
   unsigned char *hash = NULL;
   char *hexa;
   char buf[10];
   state = ssh_is_server_known(session);
+  //ssh_get_publickey_hash();
   hlen = ssh_get_pubkey_hash(session, &hash);
   if (hlen < 0)
-    return -1;
-  switch (state)
-  {
+    return -1;*/
+  char *hexa;
+  int state;
+  char buf[10];
+  unsigned char *hash = NULL;
+  size_t hlen;
+  ssh_key srv_pubkey;
+  int rc;
+
+  state=ssh_is_server_known(session);
+
+  rc = ssh_get_publickey(session, &srv_pubkey);
+  if (rc < 0) {
+      return -1;
+  }
+
+  rc = ssh_get_publickey_hash(srv_pubkey,
+                              SSH_PUBLICKEY_HASH_SHA1,
+                              &hash,
+                              &hlen);
+  ssh_key_free(srv_pubkey);
+  if (rc < 0) {
+      return -1;
+  }
+  
+  switch(state){
     case SSH_SERVER_KNOWN_OK:
       break; /* ok */
     case SSH_SERVER_KNOWN_CHANGED:
-      fprintf(stderr, "Host key for server changed: it is now:\n");
-      ssh_print_hexa("Public key hash", hash, hlen);
-      fprintf(stderr, "For security reasons, connection will be stopped\n");
-      free(hash);
+      fprintf(stderr,"Host key for server changed : server's one is now :\n");
+      ssh_print_hexa("Public key hash",hash, hlen);
+      ssh_clean_pubkey_hash(&hash);
+      fprintf(stderr,"For security reason, connection will be stopped\n");
       return -1;
     case SSH_SERVER_FOUND_OTHER:
-      fprintf(stderr, "The host key for this server was not found but an other"
-        "type of key exists.\n");
-      fprintf(stderr, "An attacker might change the default server key to"
-        "confuse your client into thinking the key does not exist\n");
-      free(hash);
+      fprintf(stderr,"The host key for this server was not found but an other type of key exists.\n");
+      fprintf(stderr,"An attacker might change the default server key to confuse your client"
+          "into thinking the key does not exist\n"
+          "We advise you to rerun the client with -d or -r for more safety.\n");
       return -1;
     case SSH_SERVER_FILE_NOT_FOUND:
-      fprintf(stderr, "Could not find known host file.\n");
-      fprintf(stderr, "If you accept the host key here, the file will be"
-       "automatically created.\n");
+      fprintf(stderr,"Could not find known host file. If you accept the host key here,\n");
+      fprintf(stderr,"the file will be automatically created.\n");
       /* fallback to SSH_SERVER_NOT_KNOWN behavior */
     case SSH_SERVER_NOT_KNOWN:
       hexa = ssh_get_hexa(hash, hlen);
       fprintf(stderr,"The server is unknown. Do you trust the host key?\n");
-      fprintf(stderr, "Public key hash: %s\n", hexa);
-      free(hexa);
-      if (fgets(buf, sizeof(buf), stdin) == NULL)
-      {
-        free(hash);
+      fprintf(stderr, "Public key hash: %s\n>", hexa);
+      ssh_string_free_char(hexa);
+      if (fgets(buf, sizeof(buf), stdin) == NULL) {
+	    ssh_clean_pubkey_hash(&hash);
         return -1;
       }
-      //if (strncasecmp(buf, "yes", 3) != 0)
-      if (!
-      strcmp(buf, "y"))
-      {
-        free(hash);
+      //if(strncasecmp(buf,"yes",3)!=0){
+      if (!strcmp(buf, "y")) {
+        ssh_clean_pubkey_hash(&hash);
         return -1;
       }
-      if (ssh_write_knownhost(session) < 0)
-      {
-        fprintf(stderr, "Error %s\n", strerror(errno));
-        free(hash);
+      fprintf(stderr,"This new key will be written on disk for further usage. do you agree? y/n\n>");
+      if (fgets(buf, sizeof(buf), stdin) == NULL) {
+	    ssh_clean_pubkey_hash(&hash);
         return -1;
       }
+      //if(strncasecmp(buf,"yes",3)==0){
+      if (strcmp(buf, "y")) {
+        if (ssh_write_knownhost(session) < 0) {
+          ssh_clean_pubkey_hash(&hash);
+          fprintf(stderr, "error %s\n", strerror(errno));
+          return -1;
+        }
+      }
+
       break;
     case SSH_SERVER_ERROR:
-      fprintf(stderr, "Error %s", ssh_get_error(session));
-      free(hash);
+      ssh_clean_pubkey_hash(&hash);
+      fprintf(stderr,"%s",ssh_get_error(session));
       return -1;
   }
-  free(hash);
+  ssh_clean_pubkey_hash(&hash);
   return 0;
 }
