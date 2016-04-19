@@ -2,7 +2,8 @@
 #include <string.h>
 #include <libssh/libssh.h>
 #include <libssh/sftp.h>
-
+//#include <libssh.h>
+//#include <sftp.h>
 //to move to new file
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -136,7 +137,7 @@ int list_remote_stuff(char path[], ssh_session sshses, sftp_session sftpses){
   sftp_attributes attributes;
   int rc;
   //dir = sftp_opendir(sftpses, path);
-  dir = sftp_opendir(sftpses, "");
+  dir = sftp_opendir(sftpses, ".");
   if (!dir)
   {
     fprintf(stderr, "Directory not opened: %s\n",
@@ -232,15 +233,24 @@ int menuloop(char name[100], char pass[100],ssh_session myssh,sftp_session mysft
     case 6: //push single
       printf("Enter file name %s",prompt);
       scanf("%s",fname);
-      push_single(local, remote, fname,myssh,mysftp);
+      if( SSH_OK != push_single(local, remote, fname,myssh,mysftp) )
+	printf("Push error\n");
+      else
+	printf("Push success");
       break;
     case 7: //pull single
       printf("Enter file name %s",prompt);
       scanf("%s",fname);
-      pull_single(local, remote, fname,myssh, mysftp);
+      if( SSH_OK != pull_single(local, remote, fname,myssh, mysftp) )
+	printf("Pull error\n");
+      else
+	printf("Pull success\n");
       break;
     case 8: // run command on remote
-      do_command(command,myssh);
+      if( SSH_OK != do_command(command,myssh) )
+	printf("run error\n");
+      else
+	printf("Run success");
       break;
     case 9:
       list_remote_stuff(remote,myssh,mysftp);
