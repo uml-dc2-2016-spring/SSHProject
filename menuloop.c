@@ -171,6 +171,7 @@ int list_remote_stuff(char path[], ssh_session sshses, sftp_session sftpses){
             ssh_get_error(sshses));
     return rc;
   }
+  return 0;
 }
 
 char* help = "Commands:\nexit\t quit\nhelp\t this help message\ndispl\t display local path (if not home)\ndispr\t display remote path (if not home)\ncdl\t change  local path\ncdr\t change remote path\npushs\t push single file\npulls\t pull single file\nrun\t execute frequent command\nlsr\t list remote stuff";
