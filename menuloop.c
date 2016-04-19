@@ -186,6 +186,8 @@ int menuloop(char name[100], char pass[100],ssh_session myssh,sftp_session mysft
   char remote[200]={"\0"};
   char command[100];
 
+  local = ".";
+  remote = ".";
   printf("Enter commonly used command\n> ");
   scanf("%s",command);
 
