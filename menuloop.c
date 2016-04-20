@@ -174,7 +174,7 @@ int list_remote_stuff(char path[], ssh_session sshses, sftp_session sftpses){
   return 0;
 }
 
-char* help = "Commands:\nexit\t quit\nhelp\t this help message\ndispl\t display local path (if not home)\ndispr\t display remote path (if not home)\ncdl\t change  local path\ncdr\t change remote path\npushs\t push single file\npulls\t pull single file\nrun\t execute frequent command\nlsr\t list remote stuff";
+char* help = "Commands:\nexit\t quit\nhelp\t this help message\ndispl\t display local path (if not home)\ndispr\t display remote path (if not home)\ncdl\t change  local path\ncdr\t change remote path\npushs\t push single file\npulls\t pull single file\nrun\t execute frequent command\nlsr\t list remote stuff\nccom\t change frequently used command\n";
 
 char* welcome = "Welcome to SSHProject.  'help' for help.\n";
 
@@ -187,11 +187,11 @@ int menuloop(char name[100], char pass[100],ssh_session myssh,sftp_session mysft
   char remote[200]={"\0"};
   char command[100];
 
-  local = ".";
-  remote = ".";
+  //  local = ".";
+  //remote = ".";
   printf("Enter commonly used command\n> ");
-  scanf("%s",command);
-
+    scanf("%s",command);
+  // fgets(command,100,stdin);
   printf("%s %s",welcome, prompt);
 
 
@@ -258,6 +258,11 @@ int menuloop(char name[100], char pass[100],ssh_session myssh,sftp_session mysft
     case 9:
       list_remote_stuff(remote,myssh,mysftp);
       break;
+    case 10: //change command
+      printf("Enter new command. %s",prompt);
+      scanf("%s",command);
+      printf("New command is: %s",command);
+      break;
     default:
       printf("oops");
       return -1;
@@ -270,8 +275,8 @@ int menuloop(char name[100], char pass[100],ssh_session myssh,sftp_session mysft
 }
 
 //for parsing user input
-#define NUMWORDS 10
-char* words[NUMWORDS] = {"exit","help","displ","dispr","cdl","cdr","pushs","pulls","run","lsr"};
+#define NUMWORDS 11
+char* words[NUMWORDS] = {"exit","help","displ","dispr","cdl","cdr","pushs","pulls","run","lsr","ccom"};
 
 int parse(char* input){
   int index = 0;
