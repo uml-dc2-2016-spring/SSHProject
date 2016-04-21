@@ -109,6 +109,13 @@ int do_command(char command[],ssh_session myssh){
     ssh_channel_free(channel);
     return rc;
   }
+  rc = ssh_channel_request_pty(channel);
+  if (rc != SSH_OK) return rc;
+  rc = ssh_channel_change_pty_size(channel, 80, 24);
+  if (rc != SSH_OK) return rc;
+  rc = ssh_channel_request_shell(channel);
+  if (rc != SSH_OK) return rc;
+  /*
   rc = ssh_channel_request_exec(channel, command);
   if (rc != SSH_OK)
   {
@@ -116,28 +123,40 @@ int do_command(char command[],ssh_session myssh){
     ssh_channel_free(channel);
     return rc;
   }
-  nbytes = ssh_channel_read(channel, buffer, sizeof(buffer), 0);
-  while (nbytes > 0)
-  {
-    if (write(1, buffer, nbytes) != (unsigned int) nbytes)
+  */
+  /*  while (ssh_channel_is_open(channel)
+	 && !ssh_channel_is_eof(channel))
     {
-      ssh_channel_close(channel);
-      ssh_channel_free(channel);
-      return SSH_ERROR;
+      
+      nbytes = ssh_channel_read(channel, buffer, sizeof(buffer), 0);
+      while (nbytes > 0)
+	{
+	  if (write(1, buffer, nbytes) != (unsigned int) nbytes)
+	    {
+	      ssh_channel_close(channel);
+	      ssh_channel_free(channel);
+	      return SSH_ERROR;
+	    }
+	  nbytes = ssh_channel_read(channel, buffer, sizeof(buffer), 0);
+	}
+      
+      if (nbytes < 0)
+	{
+	  ssh_channel_close(channel);
+	  ssh_channel_free(channel);
+	  return SSH_ERROR;
+	}
+      
+      int nw = ssh_channel_write(channel,command,strlen(command));
+      if(nw != strlen(command) )
+	printf("ssh write error");
+      nbytes = ssh_channel_read(channel, buffer, sizeof(buffer), 0);
     }
-    nbytes = ssh_channel_read(channel, buffer, sizeof(buffer), 0);
-  }
-    
-  if (nbytes < 0)
-    {
-    ssh_channel_close(channel);
-    ssh_channel_free(channel);
-    return SSH_ERROR;
-  }
   ssh_channel_send_eof(channel);
   ssh_channel_close(channel);
   ssh_channel_free(channel);
   return SSH_OK;
+  */
 }
 
 int pull_all_files(char pathl[],char pathr[], ssh_session sshses, sftp_session sftpses){
@@ -299,7 +318,7 @@ int menuloop(char name[100], char pass[100],ssh_session myssh,sftp_session mysft
       break;
     case 8: // run command on remote
       printf("Enter commonly used command\n> ");
-      scanf(" &[^\n]s",command);
+      scanf(" %[^\n]s",command);
       if( SSH_OK != do_command(command,myssh) )
 	printf("run error\n");
       else
@@ -310,7 +329,7 @@ int menuloop(char name[100], char pass[100],ssh_session myssh,sftp_session mysft
       break;
     case 10: //change command
       printf("Enter new command. %s",prompt);
-      scanf(" &[^\n]s",command);
+      scanf(" %[^\n]s",command);
       printf("New command is: %s",command);
       break;
     case 11: //pull all files from path remote to path local
