@@ -8,23 +8,20 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #define BUFFER_SIZE 1000
-int push_single(char local[],char remote[],char fname[],ssh_session sshses,sftp_session sftpses);
 
-int pull_single(char local[],char remote[],char fname[],ssh_session sshses,sftp_session sftpses);
-
-
-int do_command(char command[],ssh_session myssh);
-int pull_all_files(char pathl[],char pathr[], ssh_session sshses, sftp_session sftpses);
-
+int push_single(char local[], char remote[], char fname[], ssh_session sshses,sftp_session sftpses);
+int pull_single(char local[], char remote[], char fname[], ssh_session sshses,sftp_session sftpses);
+int do_command(char command[], ssh_session myssh);
+int pull_all_files(char pathl[], char pathr[], ssh_session sshses, sftp_session sftpses);
 int list_remote_stuff(char path[], ssh_session sshses, sftp_session sftpses);
-
-
+int change_remote_directory(char remote[], char dirname[], ssh_session sshses, sftp_session sftpses);
 
 char* help = "Commands:\nexit\t quit\nhelp\t this help message\ndispl\t display local path (if not home)\ndispr\t display remote path (if not home)\ncdl\t change  local path\ncdr\t change remote path\npushs\t push single file\npulls\t pull single file\nrun\t execute frequent command\nlsr\t list remote stuff\nccom\t change frequently used command\n";
 
 char* welcome = "Welcome to SSHProject.  'help' for help.\n";
 
 char* prompt = "\n> ";
+
 int menuloop(char name[100], char pass[100],ssh_session myssh,sftp_session mysftp){
   //int menuloop(char name[100], char pass[100]){
   char comm[100];
@@ -71,8 +68,10 @@ int menuloop(char name[100], char pass[100],ssh_session myssh,sftp_session mysft
     case 5: //change remote path
       printf("Old remote: %s",remote);
       printf("\n Enter new remote %s",prompt);
-      scanf("%s",remote);
-      printf("New remote: %s",remote);
+      scanf("%s",fname);
+      if( SSH_OK != change_remote_directory(remote, fname, myssh, mysftp) )
+        printf("Path changed successfully\n");
+      printf("New remote: %s", remote);
       break;
     case 6: //push single
       printf("Enter file name %s",prompt);
@@ -83,7 +82,7 @@ int menuloop(char name[100], char pass[100],ssh_session myssh,sftp_session mysft
 	printf("Push success");
       break;
     case 7: //pull single
-      printf("Enter file name:\n %s/> ", remote);
+      printf("Enter file name:\n%s/", remote);
       scanf("%s",fname);
       if( SSH_OK != pull_single(local, remote, fname,myssh, mysftp) )
 	printf("Pull error\n");
@@ -368,6 +367,45 @@ int list_remote_stuff(char path[], ssh_session sshses, sftp_session sftpses){
     fprintf(stderr, "Can't close directory: %s\n",
             ssh_get_error(sshses));
     return rc;
+  }
+  return 0;
+}
+
+int change_remote_directory(char remote[], char dirname[], ssh_session sshses, sftp_session sftpses){
+  sftp_dir dir;
+  int rc;
+  char *p;
+  
+  if (strcmp("..", dirname) == 0) {
+    p = strrchr(remote, (int) '/');
+    if (p != NULL) {
+        remote[p-remote] = '\0';
+    }
+  } else {
+    char rdirpath[100] = "";
+    strcpy(rdirpath, remote);
+    char temp[100] = "/";
+    strcat(temp, dirname);      // temp just adds a / to dirname, "/dirname"
+    
+    strcat(rdirpath, temp);
+    
+    // check that directory is valid by opening it
+    dir = sftp_opendir(sftpses, rdirpath);
+    if (!dir)
+    {
+      fprintf(stderr, "Directory not opened: %s\n",
+              ssh_get_error(sshses));
+      return SSH_ERROR;
+    }
+    rc = sftp_closedir(dir);
+    if (rc != SSH_OK)
+    {
+      fprintf(stderr, "Can't close directory: %s\n",
+              ssh_get_error(sshses));
+      return rc;
+    }
+    
+    strcpy(remote, rdirpath);
   }
   return 0;
 }
