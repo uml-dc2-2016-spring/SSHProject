@@ -226,15 +226,10 @@ int menuloop(char name[100], char pass[100],ssh_session myssh,sftp_session mysft
   //int menuloop(char name[100], char pass[100]){
   char comm[100];
   char fname[100];
-  char local[200]={"\0"};
-  char remote[200]={"\0"};
+  char local[200]=".";
+  char remote[200]=".";
   char command[100];
-
-  //  local = ".";
-  //remote = ".";
-  printf("Enter commonly used command\n> ");
-    scanf(" &[^\n]s",command);
-  // fgets(command,100,stdin);
+  
   printf("%s %s",welcome, prompt);
 
 
@@ -293,6 +288,8 @@ int menuloop(char name[100], char pass[100],ssh_session myssh,sftp_session mysft
 	printf("Pull success\n");
       break;
     case 8: // run command on remote
+      printf("Enter commonly used command\n> ");
+      scanf(" &[^\n]s",command);
       if( SSH_OK != do_command(command,myssh) )
 	printf("run error\n");
       else
