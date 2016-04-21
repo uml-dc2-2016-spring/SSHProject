@@ -183,17 +183,16 @@ int pull_single(char local[],char remote[],char fname[],ssh_session sshses,sftp_
   rc = 0;
   char buffer[BUFFER_SIZE];
   
-  char filepath[100] = "";
-  strcpy(filepath, remote);
+  char rfilepath[100] = "";
+  char lfilepath[100] = "";
+  strcpy(rfilepath, remote);
+  strcpy(lfilepath, local);
   char temp[100] = "/";
+  strcat(temp, fname);      // temp just adds a / to fname, "/fname"
   
   //open remote file
-  
-  strcat(temp, fname);
-  strcat(filepath, temp);
-  //printf("file path: %s\n", filepath);
-
-  rfile = sftp_open(sftpses, filepath, access_type, 0);
+  strcat(rfilepath, temp);
+  rfile = sftp_open(sftpses, rfilepath, access_type, 0);
   if (rfile == NULL)
     {
     fprintf(stderr, "Can't open file for writing: %s\n",
@@ -201,7 +200,8 @@ int pull_single(char local[],char remote[],char fname[],ssh_session sshses,sftp_
     return SSH_ERROR;
   }
   //open local file
-  FILE* lfile = fopen(fname,"wb");
+  strcat(lfilepath, temp);
+  FILE* lfile = fopen(lfilepath,"wb");
   if( lfile == NULL){
     perror("local file cannot open");
     return -1;}
