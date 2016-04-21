@@ -10,241 +10,15 @@
 #define BUFFER_SIZE 1000
 int push_single(char local[],char remote[],char fname[],ssh_session sshses,sftp_session sftpses);
 
-int push_single(char local[],char remote[],char fname[],ssh_session sshses,sftp_session sftpses){
-  sftp_file rfile;
-  int access_type = O_WRONLY | O_CREAT | O_TRUNC;
-  int rc, nwrite, nread;
-  rc = 0;
-  char buffer[BUFFER_SIZE];
-  //open local file
-  FILE* lfile = fopen(fname,"rb");
-  if( lfile == NULL){
-    perror("local file cannot open");
-    return -1;}
-  //open remote file
-  rfile = sftp_open(sftpses,fname,access_type,-1);
-  if (rfile == NULL)
-  {
-    fprintf(stderr, "Can't open file for writing: %s\n",
-            ssh_get_error(sshses));
-    return SSH_ERROR;
-  }
-
-  //loop it
-  do{
-    nread = fread( buffer, sizeof(char),BUFFER_SIZE,lfile);
-    nwrite = sftp_write(rfile,buffer,nread);
-  }while( (nread == nwrite) && (nread == BUFFER_SIZE) );
-  if( nread != nwrite)
-    fprintf(stderr, "Can't write data to remote file %s\n",
-	    ssh_get_error(sshses));
-  rc = sftp_close(rfile);
-  fclose(lfile);
-  if( rc != SSH_OK )
-    fprintf(stderr, "Can't close the written file %s\n",
-	    ssh_get_error(sshses));
-  return rc;
-}
-
 int pull_single(char local[],char remote[],char fname[],ssh_session sshses,sftp_session sftpses);
 
-int pull_single(char local[],char remote[],char fname[],ssh_session sshses,sftp_session sftpses){
-  sftp_file rfile;//remote file
-  int access_type = O_RDONLY;
-  int rc, nwrite, nread;//return code, #byte written, #byte read
-  rc = 0;
-  char buffer[BUFFER_SIZE];
-  
-  char filepath[100] = "";
-  strcpy(filepath, remote);
-  char temp[100] = "/";
-  
-  //open remote file
-  
-  strcat(temp, fname);
-  strcat(filepath, temp);
-  //printf("file path: %s\n", filepath);
-
-  rfile = sftp_open(sftpses, filepath, access_type, 0);
-  if (rfile == NULL)
-    {
-    fprintf(stderr, "Can't open file for writing: %s\n",
-            ssh_get_error(sshses));
-    return SSH_ERROR;
-  }
-  //open local file
-  FILE* lfile = fopen(fname,"wb");
-  if( lfile == NULL){
-    perror("local file cannot open");
-    return -1;}
-  //loop it
-  do{
-    nread = sftp_read(rfile,buffer,sizeof(buffer));
-    nwrite = fwrite( buffer, 1 , nread, lfile );
-    //nwrite = fwrite( buffer, sizeof(char),BUFFER_SIZE,lfile);
-  }while( (nread == nwrite) && (nwrite == BUFFER_SIZE) );
-  if( nread != nwrite)
-    fprintf(stderr, "Can't write data to local file %s\n",
-	    ssh_get_error(sshses));
-  rc = sftp_close(rfile);
-  fclose(lfile);
-  if( rc != SSH_OK )
-    fprintf(stderr, "Can't close the remote file %s\n",
-	    ssh_get_error(sshses));
-  return rc;
-}
 
 int do_command(char command[],ssh_session myssh);
-int do_command(char command[],ssh_session myssh){
-  ssh_channel channel;
-  int rc;
-  char buffer[256];
-  int nbytes;
-  channel = ssh_channel_new(myssh);
-  if (channel == NULL)
-    return SSH_ERROR;
-  rc = ssh_channel_open_session(channel);
-  if (rc != SSH_OK)
-  {
-    ssh_channel_free(channel);
-    return rc;
-  }
-  rc = ssh_channel_request_pty(channel);
-  if (rc != SSH_OK) return rc;
-  rc = ssh_channel_change_pty_size(channel, 80, 24);
-  if (rc != SSH_OK) return rc;
-  rc = ssh_channel_request_shell(channel);
-  if (rc != SSH_OK) return rc;
-  /*
-  rc = ssh_channel_request_exec(channel, command);
-  if (rc != SSH_OK)
-  {
-    ssh_channel_close(channel);
-    ssh_channel_free(channel);
-    return rc;
-  }
-  */
-  /*  while (ssh_channel_is_open(channel)
-	 && !ssh_channel_is_eof(channel))
-    {
-      
-      nbytes = ssh_channel_read(channel, buffer, sizeof(buffer), 0);
-      while (nbytes > 0)
-	{
-	  if (write(1, buffer, nbytes) != (unsigned int) nbytes)
-	    {
-	      ssh_channel_close(channel);
-	      ssh_channel_free(channel);
-	      return SSH_ERROR;
-	    }
-	  nbytes = ssh_channel_read(channel, buffer, sizeof(buffer), 0);
-	}
-      
-      if (nbytes < 0)
-	{
-	  ssh_channel_close(channel);
-	  ssh_channel_free(channel);
-	  return SSH_ERROR;
-	}
-      
-      int nw = ssh_channel_write(channel,command,strlen(command));
-      if(nw != strlen(command) )
-	printf("ssh write error");
-      nbytes = ssh_channel_read(channel, buffer, sizeof(buffer), 0);
-    }
-  ssh_channel_send_eof(channel);
-  ssh_channel_close(channel);
-  ssh_channel_free(channel);
-  return SSH_OK;
-  */
-}
+int pull_all_files(char pathl[],char pathr[], ssh_session sshses, sftp_session sftpses);
 
-int pull_all_files(char pathl[],char pathr[], ssh_session sshses, sftp_session sftpses){
-  sftp_dir dir;
-  sftp_attributes attributes;
-  int rc;
-  int filecount = 0;
-  int foldercount = 0;
-  dir = sftp_opendir(sftpses, pathr);
-  //dir = sftp_opendir(sftpses, ".");
-  if (!dir)
-  {
-    fprintf(stderr, "Directory not opened: %s\n",
-            ssh_get_error(sshses));
-    return SSH_ERROR;
-  }
-  while ((attributes = sftp_readdir(sftpses, dir)) != NULL)
-    {
-      if('.' == attributes->name[0])
-	continue;
-      if(2 == attributes->type){
-	foldercount ++;
-	continue;
-      }
-      if(SSH_OK == pull_single(pathl, pathr,attributes->name, sshses, sftpses))
-	filecount ++;
-    }
-  if (!sftp_dir_eof(dir))
-    {
-      fprintf(stderr, "Can't list directory: %s\n",
-	      ssh_get_error(sshses));
-      sftp_closedir(dir);
-      return SSH_ERROR;
-    }
-  rc = sftp_closedir(dir);
-  if (rc != SSH_OK)
-    {
-      fprintf(stderr, "Can't close directory: %s\n",
-	      ssh_get_error(sshses));
-      return rc;
-    }
-  printf("Pulled %d files.  Skipped %d folders.",filecount,foldercount);
-  return 0;
-}
 int list_remote_stuff(char path[], ssh_session sshses, sftp_session sftpses);
 
-int list_remote_stuff(char path[], ssh_session sshses, sftp_session sftpses){
-  sftp_dir dir;
-  sftp_attributes attributes;
-  int rc;
-  dir = sftp_opendir(sftpses, path);
-  //dir = sftp_opendir(sftpses, ".");
-  if (!dir)
-  {
-    fprintf(stderr, "Directory not opened: %s\n",
-            ssh_get_error(sshses));
-    return SSH_ERROR;
-  }
-  printf("Name                       Size Perms ModTime Type\n");
-  while ((attributes = sftp_readdir(sftpses, dir)) != NULL)
-  {
-    //skip all things starting with "."
-    if('.' == (attributes->name)[0])
-      continue;
-    printf("%-20s %10llu %.8o %d %d\n",
-     attributes->name,
-     (long long unsigned int) attributes->size,
-	   attributes->permissions,
-	   attributes-> mtime,
-	   attributes->type);
-     sftp_attributes_free(attributes);
-  }
-  if (!sftp_dir_eof(dir))
-  {
-    fprintf(stderr, "Can't list directory: %s\n",
-            ssh_get_error(sshses));
-    sftp_closedir(dir);
-    return SSH_ERROR;
-  }
-  rc = sftp_closedir(dir);
-  if (rc != SSH_OK)
-  {
-    fprintf(stderr, "Can't close directory: %s\n",
-            ssh_get_error(sshses));
-    return rc;
-  }
-  return 0;
-}
+
 
 char* help = "Commands:\nexit\t quit\nhelp\t this help message\ndispl\t display local path (if not home)\ndispr\t display remote path (if not home)\ncdl\t change  local path\ncdr\t change remote path\npushs\t push single file\npulls\t pull single file\nrun\t execute frequent command\nlsr\t list remote stuff\nccom\t change frequently used command\n";
 
@@ -365,3 +139,235 @@ int parse(char* input){
   return -1;
 }
 
+
+int push_single(char local[],char remote[],char fname[],ssh_session sshses,sftp_session sftpses){
+  sftp_file rfile;
+  int access_type = O_WRONLY | O_CREAT | O_TRUNC;
+  int rc, nwrite, nread;
+  rc = 0;
+  char buffer[BUFFER_SIZE];
+  //open local file
+  FILE* lfile = fopen(fname,"rb");
+  if( lfile == NULL){
+    perror("local file cannot open");
+    return -1;}
+  //open remote file
+  rfile = sftp_open(sftpses,fname,access_type,-1);
+  if (rfile == NULL)
+  {
+    fprintf(stderr, "Can't open file for writing: %s\n",
+            ssh_get_error(sshses));
+    return SSH_ERROR;
+  }
+
+  //loop it
+  do{
+    nread = fread( buffer, sizeof(char),BUFFER_SIZE,lfile);
+    nwrite = sftp_write(rfile,buffer,nread);
+  }while( (nread == nwrite) && (nread == BUFFER_SIZE) );
+  if( nread != nwrite)
+    fprintf(stderr, "Can't write data to remote file %s\n",
+	    ssh_get_error(sshses));
+  rc = sftp_close(rfile);
+  fclose(lfile);
+  if( rc != SSH_OK )
+    fprintf(stderr, "Can't close the written file %s\n",
+	    ssh_get_error(sshses));
+  return rc;
+}
+
+int pull_single(char local[],char remote[],char fname[],ssh_session sshses,sftp_session sftpses){
+  sftp_file rfile;//remote file
+  int access_type = O_RDONLY;
+  int rc, nwrite, nread;//return code, #byte written, #byte read
+  rc = 0;
+  char buffer[BUFFER_SIZE];
+  
+  char filepath[100] = "";
+  strcpy(filepath, remote);
+  char temp[100] = "/";
+  
+  //open remote file
+  
+  strcat(temp, fname);
+  strcat(filepath, temp);
+  //printf("file path: %s\n", filepath);
+
+  rfile = sftp_open(sftpses, filepath, access_type, 0);
+  if (rfile == NULL)
+    {
+    fprintf(stderr, "Can't open file for writing: %s\n",
+            ssh_get_error(sshses));
+    return SSH_ERROR;
+  }
+  //open local file
+  FILE* lfile = fopen(fname,"wb");
+  if( lfile == NULL){
+    perror("local file cannot open");
+    return -1;}
+  //loop it
+  do{
+    nread = sftp_read(rfile,buffer,sizeof(buffer));
+    nwrite = fwrite( buffer, 1 , nread, lfile );
+    //nwrite = fwrite( buffer, sizeof(char),BUFFER_SIZE,lfile);
+  }while( (nread == nwrite) && (nwrite == BUFFER_SIZE) );
+  if( nread != nwrite)
+    fprintf(stderr, "Can't write data to local file %s\n",
+	    ssh_get_error(sshses));
+  rc = sftp_close(rfile);
+  fclose(lfile);
+  if( rc != SSH_OK )
+    fprintf(stderr, "Can't close the remote file %s\n",
+	    ssh_get_error(sshses));
+  return rc;
+}
+
+int do_command(char command[],ssh_session myssh){
+  ssh_channel channel;
+  int rc;
+  char buffer[256];
+  int nbytes;
+  channel = ssh_channel_new(myssh);
+  if (channel == NULL)
+    return SSH_ERROR;
+  rc = ssh_channel_open_session(channel);
+  if (rc != SSH_OK)
+  {
+    ssh_channel_free(channel);
+    return rc;
+  }
+  rc = ssh_channel_request_pty(channel);
+  if (rc != SSH_OK) return rc;
+  rc = ssh_channel_change_pty_size(channel, 80, 24);
+  if (rc != SSH_OK) return rc;
+  rc = ssh_channel_request_shell(channel);
+  if (rc != SSH_OK) return rc;
+  /*
+  rc = ssh_channel_request_exec(channel, command);
+  if (rc != SSH_OK)
+  {
+    ssh_channel_close(channel);
+    ssh_channel_free(channel);
+    return rc;
+  }
+  */
+  /*  while (ssh_channel_is_open(channel)
+	 && !ssh_channel_is_eof(channel))
+    {
+      
+      nbytes = ssh_channel_read(channel, buffer, sizeof(buffer), 0);
+      while (nbytes > 0)
+	{
+	  if (write(1, buffer, nbytes) != (unsigned int) nbytes)
+	    {
+	      ssh_channel_close(channel);
+	      ssh_channel_free(channel);
+	      return SSH_ERROR;
+	    }
+	  nbytes = ssh_channel_read(channel, buffer, sizeof(buffer), 0);
+	}
+      
+      if (nbytes < 0)
+	{
+	  ssh_channel_close(channel);
+	  ssh_channel_free(channel);
+	  return SSH_ERROR;
+	}
+      
+      int nw = ssh_channel_write(channel,command,strlen(command));
+      if(nw != strlen(command) )
+	printf("ssh write error");
+      nbytes = ssh_channel_read(channel, buffer, sizeof(buffer), 0);
+    }
+  ssh_channel_send_eof(channel);
+  ssh_channel_close(channel);
+  ssh_channel_free(channel);
+  return SSH_OK;
+  */
+}
+
+int pull_all_files(char pathl[],char pathr[], ssh_session sshses, sftp_session sftpses){
+  sftp_dir dir;
+  sftp_attributes attributes;
+  int rc;
+  int filecount = 0;
+  int foldercount = 0;
+  dir = sftp_opendir(sftpses, pathr);
+  //dir = sftp_opendir(sftpses, ".");
+  if (!dir)
+  {
+    fprintf(stderr, "Directory not opened: %s\n",
+            ssh_get_error(sshses));
+    return SSH_ERROR;
+  }
+  while ((attributes = sftp_readdir(sftpses, dir)) != NULL)
+    {
+      if('.' == attributes->name[0])
+	continue;
+      if(2 == attributes->type){
+	foldercount ++;
+	continue;
+      }
+      if(SSH_OK == pull_single(pathl, pathr,attributes->name, sshses, sftpses))
+	filecount ++;
+    }
+  if (!sftp_dir_eof(dir))
+    {
+      fprintf(stderr, "Can't list directory: %s\n",
+	      ssh_get_error(sshses));
+      sftp_closedir(dir);
+      return SSH_ERROR;
+    }
+  rc = sftp_closedir(dir);
+  if (rc != SSH_OK)
+    {
+      fprintf(stderr, "Can't close directory: %s\n",
+	      ssh_get_error(sshses));
+      return rc;
+    }
+  printf("Pulled %d files.  Skipped %d folders.",filecount,foldercount);
+  return 0;
+}
+
+int list_remote_stuff(char path[], ssh_session sshses, sftp_session sftpses){
+  sftp_dir dir;
+  sftp_attributes attributes;
+  int rc;
+  dir = sftp_opendir(sftpses, path);
+  //dir = sftp_opendir(sftpses, ".");
+  if (!dir)
+  {
+    fprintf(stderr, "Directory not opened: %s\n",
+            ssh_get_error(sshses));
+    return SSH_ERROR;
+  }
+  printf("Name                       Size Perms ModTime Type\n");
+  while ((attributes = sftp_readdir(sftpses, dir)) != NULL)
+  {
+    //skip all things starting with "."
+    if('.' == (attributes->name)[0])
+      continue;
+    printf("%-20s %10llu %.8o %d %d\n",
+     attributes->name,
+     (long long unsigned int) attributes->size,
+	   attributes->permissions,
+	   attributes-> mtime,
+	   attributes->type);
+     sftp_attributes_free(attributes);
+  }
+  if (!sftp_dir_eof(dir))
+  {
+    fprintf(stderr, "Can't list directory: %s\n",
+            ssh_get_error(sshses));
+    sftp_closedir(dir);
+    return SSH_ERROR;
+  }
+  rc = sftp_closedir(dir);
+  if (rc != SSH_OK)
+  {
+    fprintf(stderr, "Can't close directory: %s\n",
+            ssh_get_error(sshses));
+    return rc;
+  }
+  return 0;
+}
