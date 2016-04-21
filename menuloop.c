@@ -140,31 +140,74 @@ int do_command(char command[],ssh_session myssh){
   return SSH_OK;
 }
 
-int list_remote_stuff(char path[], ssh_session sshses, sftp_session sftpses);
-
-int list_remote_stuff(char path[], ssh_session sshses, sftp_session sftpses){
+int pull_all_files(char pathl[],char pathr[], ssh_session sshses, sftp_session sftpses){
   sftp_dir dir;
   sftp_attributes attributes;
   int rc;
-  //dir = sftp_opendir(sftpses, path);
-  dir = sftp_opendir(sftpses, ".");
+  int filecount = 0;
+  int foldercount = 0;
+  dir = sftp_opendir(sftpses, pathr);
+  //dir = sftp_opendir(sftpses, ".");
   if (!dir)
   {
     fprintf(stderr, "Directory not opened: %s\n",
             ssh_get_error(sshses));
     return SSH_ERROR;
   }
-  printf("Name                       Size Perms    Owner\tGroup\n");
+  while ((attributes = sftp_readdir(sftpses, dir)) != NULL)
+    {
+      if('.' == attributes->name[0])
+	continue;
+      if(2 == attributes->type){
+	foldercount ++;
+	continue;
+      }
+      if(SSH_OK == pull_single(pathl, pathr,attributes->name, sshses, sftpses))
+	filecount ++;
+    }
+  if (!sftp_dir_eof(dir))
+    {
+      fprintf(stderr, "Can't list directory: %s\n",
+	      ssh_get_error(sshses));
+      sftp_closedir(dir);
+      return SSH_ERROR;
+    }
+  rc = sftp_closedir(dir);
+  if (rc != SSH_OK)
+    {
+      fprintf(stderr, "Can't close directory: %s\n",
+	      ssh_get_error(sshses));
+      return rc;
+    }
+  printf("Pulled %d files.  Skipped %d folders.",filecount,foldercount);
+  return 0;
+}
+int list_remote_stuff(char path[], ssh_session sshses, sftp_session sftpses);
+
+int list_remote_stuff(char path[], ssh_session sshses, sftp_session sftpses){
+  sftp_dir dir;
+  sftp_attributes attributes;
+  int rc;
+  dir = sftp_opendir(sftpses, path);
+  //dir = sftp_opendir(sftpses, ".");
+  if (!dir)
+  {
+    fprintf(stderr, "Directory not opened: %s\n",
+            ssh_get_error(sshses));
+    return SSH_ERROR;
+  }
+  printf("Name                       Size Perms ModTime Type\n");
   while ((attributes = sftp_readdir(sftpses, dir)) != NULL)
   {
-    printf("%-20s %10llu %.8o %s(%d)\t%s(%d)\n",
+    //skip all things starting with "."
+    if('.' == (attributes->name)[0])
+      continue;
+    printf("%-20s %10llu %.8o %d %d\n",
      attributes->name,
      (long long unsigned int) attributes->size,
-     attributes->permissions,
-     attributes->owner,
-     attributes->uid,
-     attributes->group,
-     attributes->gid);
+	   attributes->permissions,
+	   attributes-> mtime,
+	   attributes->type);
      sftp_attributes_free(attributes);
   }
   if (!sftp_dir_eof(dir))
@@ -197,13 +240,6 @@ int menuloop(char name[100], char pass[100],ssh_session myssh,sftp_session mysft
   char remote[200] = ".";
   char command[100];
   
-  //  local = ".";
-  //remote = ".";
-  scanf("%*[^\n]%*c");
-  fgets(command,100,stdin);
-  printf("Enter commonly used command\n> ");
-    //scanf("%s",command);
-  //printf("<%s>\n", fgets(command,100,stdin));
   printf("%s %s",welcome, prompt);
 
 
@@ -262,6 +298,8 @@ int menuloop(char name[100], char pass[100],ssh_session myssh,sftp_session mysft
 	printf("Pull success\n");
       break;
     case 8: // run command on remote
+      printf("Enter commonly used command\n> ");
+      scanf(" &[^\n]s",command);
       if( SSH_OK != do_command(command,myssh) )
 	printf("run error\n");
       else
@@ -272,8 +310,13 @@ int menuloop(char name[100], char pass[100],ssh_session myssh,sftp_session mysft
       break;
     case 10: //change command
       printf("Enter new command. %s",prompt);
-      scanf("%s",command);
+      scanf(" &[^\n]s",command);
       printf("New command is: %s",command);
+      break;
+    case 11: //pull all files from path remote to path local
+      printf("Pulling all files from %s to %s.",remote,local);
+      if( 0 == pull_all_files(local,remote,myssh,mysftp))
+	printf("Success");
       break;
     default:
       printf("oops");
@@ -287,8 +330,8 @@ int menuloop(char name[100], char pass[100],ssh_session myssh,sftp_session mysft
 }
 
 //for parsing user input
-#define NUMWORDS 11
-char* words[NUMWORDS] = {"exit","help","displ","dispr","cdl","cdr","pushs","pulls","run","lsr","ccom"};
+#define NUMWORDS 12
+char* words[NUMWORDS] = {"exit","help","displ","dispr","cdl","cdr","pushs","pulls","run","lsr","ccom","pulla"};
 
 int parse(char* input){
   int index = 0;
