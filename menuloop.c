@@ -54,8 +54,18 @@ int pull_single(char local[],char remote[],char fname[],ssh_session sshses,sftp_
   int rc, nwrite, nread;//return code, #byte written, #byte read
   rc = 0;
   char buffer[BUFFER_SIZE];
+  
+  char filepath[100] = "";
+  strcpy(filepath, remote);
+  char temp[100] = "/";
+  
   //open remote file
-  rfile = sftp_open(sftpses,fname,access_type,0);
+  
+  strcat(temp, fname);
+  strcat(filepath, temp);
+  //printf("file path: %s\n", filepath);
+
+  rfile = sftp_open(sftpses, filepath, access_type, 0);
   if (rfile == NULL)
     {
     fprintf(stderr, "Can't open file for writing: %s\n",
@@ -183,15 +193,17 @@ int menuloop(char name[100], char pass[100],ssh_session myssh,sftp_session mysft
   //int menuloop(char name[100], char pass[100]){
   char comm[100];
   char fname[100];
-  char local[200]={"\0"};
-  char remote[200]={"\0"};
+  char local[200] = ".";
+  char remote[200] = ".";
   char command[100];
-
+  
   //  local = ".";
   //remote = ".";
+  scanf("%*[^\n]%*c");
+  fgets(command,100,stdin);
   printf("Enter commonly used command\n> ");
-    scanf("%s",command);
-  // fgets(command,100,stdin);
+    //scanf("%s",command);
+  //printf("<%s>\n", fgets(command,100,stdin));
   printf("%s %s",welcome, prompt);
 
 
@@ -242,7 +254,7 @@ int menuloop(char name[100], char pass[100],ssh_session myssh,sftp_session mysft
 	printf("Push success");
       break;
     case 7: //pull single
-      printf("Enter file name %s",prompt);
+      printf("Enter file name:\n %s/> ", remote);
       scanf("%s",fname);
       if( SSH_OK != pull_single(local, remote, fname,myssh, mysftp) )
 	printf("Pull error\n");
