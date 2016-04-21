@@ -93,7 +93,7 @@ int menuloop(char name[100], char pass[100],ssh_session myssh,sftp_session mysft
       printf("Enter commonly used command\n> ");
       scanf(" %[^\n]s",command);
       if( SSH_OK != do_command(command,myssh) )
-	printf("run error\n");
+      	printf("run error\n");
       else
 	printf("Run success");
       break;
@@ -226,63 +226,62 @@ int do_command(char command[],ssh_session myssh){
   int rc;
   char buffer[256];
   int nbytes;
+  char encoding[500] = "LC_ALL=C LANG=C ";
+  strcat(encoding, command);
   channel = ssh_channel_new(myssh);
   if (channel == NULL)
     return SSH_ERROR;
   rc = ssh_channel_open_session(channel);
   if (rc != SSH_OK)
-  {
-    ssh_channel_free(channel);
-    return rc;
-  }
-  rc = ssh_channel_request_pty(channel);
-  if (rc != SSH_OK) return rc;
-  rc = ssh_channel_change_pty_size(channel, 80, 24);
-  if (rc != SSH_OK) return rc;
-  rc = ssh_channel_request_shell(channel);
-  if (rc != SSH_OK) return rc;
-  /*
-  rc = ssh_channel_request_exec(channel, command);
-  if (rc != SSH_OK)
-  {
-    ssh_channel_close(channel);
-    ssh_channel_free(channel);
-    return rc;
-  }
-  */
-  /*  while (ssh_channel_is_open(channel)
-	 && !ssh_channel_is_eof(channel))
     {
-      
-      nbytes = ssh_channel_read(channel, buffer, sizeof(buffer), 0);
-      while (nbytes > 0)
-	{
-	  if (write(1, buffer, nbytes) != (unsigned int) nbytes)
-	    {
-	      ssh_channel_close(channel);
-	      ssh_channel_free(channel);
-	      return SSH_ERROR;
-	    }
-	  nbytes = ssh_channel_read(channel, buffer, sizeof(buffer), 0);
-	}
-      
-      if (nbytes < 0)
+      ssh_channel_free(channel);
+      return rc;
+    }
+  rc = ssh_channel_request_exec(channel, encoding);
+  if (rc != SSH_OK)
+    {
+      ssh_channel_close(channel);
+      ssh_channel_free(channel);
+      return rc;
+    }
+  nbytes = ssh_channel_read(channel, buffer, sizeof(buffer), 0);
+  while( nbytes > 0)
+    {
+      if (fwrite(buffer, 1, nbytes, stdout) != nbytes)
 	{
 	  ssh_channel_close(channel);
 	  ssh_channel_free(channel);
 	  return SSH_ERROR;
 	}
-      
-      int nw = ssh_channel_write(channel,command,strlen(command));
-      if(nw != strlen(command) )
-	printf("ssh write error");
       nbytes = ssh_channel_read(channel, buffer, sizeof(buffer), 0);
+    }
+  if (nbytes < 0)
+    {
+      ssh_channel_close(channel);
+      ssh_channel_free(channel);
+      return SSH_ERROR;
+    }
+  nbytes = ssh_channel_read(channel, buffer, sizeof(buffer), 1);
+  while( nbytes > 0)
+    {
+      if (fwrite(buffer, 1, nbytes, stdout) != nbytes)
+	{
+	  ssh_channel_close(channel);
+	  ssh_channel_free(channel);
+	  return SSH_ERROR;
+	}
+      nbytes = ssh_channel_read(channel, buffer, sizeof(buffer), 1);
+    }
+  if (nbytes < 0)
+    {
+      ssh_channel_close(channel);
+      ssh_channel_free(channel);
+      return SSH_ERROR;
     }
   ssh_channel_send_eof(channel);
   ssh_channel_close(channel);
   ssh_channel_free(channel);
   return SSH_OK;
-  */
 }
 
 int pull_all_files(char pathl[],char pathr[], ssh_session sshses, sftp_session sftpses){
