@@ -7,6 +7,22 @@ A simple minimal cloud service interface over ssh to combine file transfer and
 - Andrew Gabriel
 
 
+# Completed Progress (4/21/2016)
+- Fixed & Functional remote command execution result reading (stderr + stdin)
+- Pathing algorithm completed
+- Pathing enabled for remote side
+- Completed multi-word input capture
+- 
+# To Do (4/21/2016)
+- Implement pathing algorithm on local side
+- Implement Push All Files
+- Write documentation
+
+# Wishlist (4/21/2016)
+- Password hiding, or load from file
+- make overwrite optional
+- handle connection abort from computer sleep
+
 # Completed Progress (4/14/2016)
 - Functional single file push
 - Functional user interface
