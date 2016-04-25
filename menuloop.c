@@ -9,12 +9,16 @@
 #include <fcntl.h>
 #define BUFFER_SIZE 1000
 
+#include <dirent.h>
+#include <sys/types.h>
 int push_single(char local[], char remote[], char fname[], ssh_session sshses,sftp_session sftpses);
 int pull_single(char local[], char remote[], char fname[], ssh_session sshses,sftp_session sftpses);
 int do_command(char command[], ssh_session myssh);
 int pull_all_files(char pathl[], char pathr[], ssh_session sshses, sftp_session sftpses);
 int list_remote_stuff(char path[], ssh_session sshses, sftp_session sftpses);
 int change_remote_directory(char remote[], char dirname[], ssh_session sshses, sftp_session sftpses);
+int push_all_files(char pathl,char pathr,ssh_session sshses, sftp_session sftpses);
+
 
 char* help = "Commands:\nexit\t quit\nhelp\t this help message\ndispl\t display local path (if not home)\ndispr\t display remote path (if not home)\ncdl\t change  local path\ncdr\t change remote path\npushs\t push single file\npulls\t pull single file\nrun\t execute frequent command\nlsr\t list remote stuff\nccom\t change frequently used command\n";
 
@@ -42,8 +46,8 @@ int menuloop(char name[100], char pass[100],ssh_session myssh,sftp_session mysft
   //5 change remote
   scanf("%s", comm);
 
-  while( 0 != parse(comm) ){
-    switch( parse(comm) ) {
+  while( 0 != parse(comm,myssh) ){
+    switch( parse(comm,myssh) ) {
     case 0:
       return 0;
       break;
@@ -62,7 +66,9 @@ int menuloop(char name[100], char pass[100],ssh_session myssh,sftp_session mysft
     case 4: //change local path
       printf("Old local: %s",local);
       printf("\n Enter new local %s",prompt);
-      scanf("%s",local);
+      scanf("%s",fname);
+      if( 0 == change_local_directory(local, fname) )
+	printf("Path Changed succesfully\n");
       printf("New local: %s",local);
       break;
     case 5: //change remote path
@@ -125,7 +131,12 @@ int menuloop(char name[100], char pass[100],ssh_session myssh,sftp_session mysft
 #define NUMWORDS 12
 char* words[NUMWORDS] = {"exit","help","displ","dispr","cdl","cdr","pushs","pulls","run","lsr","ccom","pulla"};
 
-int parse(char* input){
+int parse(char* input,ssh_session myses){
+  //make sure our session is still open
+  if(! ssh_is_connected(myses) ){
+    printf("Session is not connected.  Exiting.");
+    return 0;
+  }
   int index = 0;
   //map use input to command number
   do{
@@ -326,6 +337,10 @@ int pull_all_files(char pathl[],char pathr[], ssh_session sshses, sftp_session s
   printf("Pulled %d files.  Skipped %d folders.",filecount,foldercount);
   return 0;
 }
+/*int push_all_files(char pathl[], char pathr[], ssh_session sshses, sftp_session sftpses)
+{
+*/
+
 
 int list_remote_stuff(char path[], ssh_session sshses, sftp_session sftpses){
   sftp_dir dir;
@@ -405,6 +420,42 @@ int change_remote_directory(char remote[], char dirname[], ssh_session sshses, s
     }
     
     strcpy(remote, rdirpath);
+  }
+  return 0;
+}
+ int change_local_directory(char local[], char dirname[]){
+  DIR* dir;
+  int rc;
+  char *p;
+  
+  if (strcmp("..", dirname) == 0) {
+    p = strrchr(local, (int) '/');
+    if (p != NULL) {
+        local[p - local] = '\0';
+    }
+  } else {
+    char rdirpath[100] = "";
+    strcpy(rdirpath, local);
+    char temp[100] = "/";
+    strcat(temp, dirname);      // temp just adds a / to dirname, "/dirname"
+    
+    strcat(rdirpath, temp);
+    
+    // check that directory is valid by opening it
+    dir = opendir( rdirpath);
+    if (!dir)
+    {
+      perror( "Directory not opened:");
+      return errno;
+    }
+    rc = closedir(dir);
+    if (rc != 0)
+    {
+      perror( "Can't close directory:");
+      return errno;
+    }
+    
+    strcpy(local, rdirpath);
   }
   return 0;
 }
