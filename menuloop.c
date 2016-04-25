@@ -66,15 +66,15 @@ int menuloop(char name[100], char pass[100],ssh_session myssh,sftp_session mysft
       printf("New local: %s",local);
       break;
     case 5: //change remote path
-      printf("Old remote: %s",remote);
-      printf("\n Enter new remote %s",prompt);
+      printf("Current remote path: %s", remote);
+      printf("\n Enter a directory: %s", prompt);
       scanf("%s",fname);
       if( SSH_OK != change_remote_directory(remote, fname, myssh, mysftp) )
         printf("Path changed successfully\n");
       printf("New remote: %s", remote);
       break;
     case 6: //push single
-      printf("Enter file name %s",prompt);
+      printf("Enter file name:\n%s/", local);
       scanf("%s",fname);
       if( SSH_OK != push_single(local, remote, fname,myssh,mysftp) )
 	printf("Push error\n");
@@ -145,13 +145,23 @@ int push_single(char local[],char remote[],char fname[],ssh_session sshses,sftp_
   int rc, nwrite, nread;
   rc = 0;
   char buffer[BUFFER_SIZE];
+  
+  char rfilepath[100] = "";
+  char lfilepath[100] = "";
+  strcpy(rfilepath, remote);
+  strcpy(lfilepath, local);
+  char temp[100] = "/";
+  strcat(temp, fname);      // temp just adds a / to fname, "/fname"
+  
   //open local file
-  FILE* lfile = fopen(fname,"rb");
+  strcat(lfilepath, temp);
+  FILE* lfile = fopen(lfilepath,"rb");
   if( lfile == NULL){
     perror("local file cannot open");
     return -1;}
   //open remote file
-  rfile = sftp_open(sftpses,fname,access_type,-1);
+  strcat(rfilepath, temp);
+  rfile = sftp_open(sftpses,rfilepath,access_type,-1);
   if (rfile == NULL)
   {
     fprintf(stderr, "Can't open file for writing: %s\n",
@@ -378,13 +388,13 @@ int change_remote_directory(char remote[], char dirname[], ssh_session sshses, s
   if (strcmp("..", dirname) == 0) {
     p = strrchr(remote, (int) '/');
     if (p != NULL) {
-        remote[p-remote] = '\0';
+        remote[p - remote] = '\0';
     }
   } else {
     char rdirpath[100] = "";
     strcpy(rdirpath, remote);
     char temp[100] = "/";
-    strcat(temp, dirname);      // temp just adds a / to dirname, "/dirname"
+    strcat(temp, dirname);      // temp just adds a '/' to dirname, "/dirname"
     
     strcat(rdirpath, temp);
     
