@@ -135,7 +135,7 @@ int menuloop(char name[100], char pass[100],ssh_session myssh,sftp_session mysft
 }
 
 //for parsing user input
-#define NUMWORDS 12
+#define NUMWORDS 13
 char* words[NUMWORDS] = {"exit", "help", "displ", "dispr", "cdl", "cdr", "pushs", "pulls", "run", "lsr", "lsl", "pulla", "pusha"};
 
 int parse(char* input,ssh_session myses){
