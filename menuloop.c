@@ -10,6 +10,7 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #define BUFFER_SIZE 1000
+#define DEFAULT_PATH "START_FOLDER"
 
 int push_single(char local[], char remote[], char fname[], ssh_session sshses,sftp_session sftpses);
 int pull_single(char local[], char remote[], char fname[], ssh_session sshses,sftp_session sftpses);
@@ -30,7 +31,7 @@ int menuloop(char name[100], char pass[100],ssh_session myssh,sftp_session mysft
   //int menuloop(char name[100], char pass[100]){
   char comm[100];
   char fname[100];
-  char local[200] = ".";
+  char local[200] = ".";//replace with DEFAULT_PATH
   char remote[200] = ".";
   char command[100];
   
@@ -113,6 +114,14 @@ int menuloop(char name[100], char pass[100],ssh_session myssh,sftp_session mysft
       printf("Pulling all files from %s to %s.",remote,local);
       if( 0 == pull_all_files(local,remote,myssh,mysftp))
 	printf("Success");
+      else
+	printf("Failure");
+      break;
+    case 12: //push all files
+      if( 0 == push_all_files(local,remote,myssh,mysftp) )
+	printf("Sucess");
+      else
+	printf("Failure");
       break;
     default:
       printf("oops");
@@ -127,7 +136,7 @@ int menuloop(char name[100], char pass[100],ssh_session myssh,sftp_session mysft
 
 //for parsing user input
 #define NUMWORDS 12
-char* words[NUMWORDS] = {"exit","help","displ","dispr","cdl","cdr","pushs","pulls","run","lsr","lsl","pulla"};
+char* words[NUMWORDS] = {"exit", "help", "displ", "dispr", "cdl", "cdr", "pushs", "pulls", "run", "lsr", "lsl", "pulla", "pusha"};
 
 int parse(char* input,ssh_session myses){
   //make sure our session is still open
@@ -361,11 +370,11 @@ int pull_all_files(char pathl[],char pathr[], ssh_session sshses, sftp_session s
  
   return 0;
 }
-/*
+
 int push_all_files(char pathl[], char pathr[], ssh_session sshses, sftp_session sftpses)
 {
   DIR* dirr;
-  DIRENT* attrib;
+  struct dirent* attrib;
   int rc;
   int filecount = 0;
   int foldercount = 0;
@@ -379,23 +388,25 @@ int push_all_files(char pathl[], char pathr[], ssh_session sshses, sftp_session 
   while( (attrib = readdir( dirr)) != NULL)
     {
       //later on see if the "." filter is needed
+      if( '.' == attrib->d_name[0] )
+	continue;
       //skip all but regular files
       if( attrib->d_type != DT_REG ){
 	foldercount ++;
 	continue;
       }
-      if(SSH_OK == push_single(pathl, pathr, attrib.d_name,sshses, sftpses) )
+      if(SSH_OK == push_single(pathl, pathr, attrib->d_name,sshses, sftpses) )
 	filecount ++;
     }
   //place report before closing so a failed close still tells what was moved
   printf("Pushed %d regular files.  Skipped %d others.",filecount,foldercount);
   if( 0 != closedir(dirr) ){
     perror("Cannot close directory.");
-    return perror;
+    return errno;
   }
   return 0;
 }
-*/
+
 int list_remote_stuff(char path[], ssh_session sshses, sftp_session sftpses){
   sftp_dir dir;
   sftp_attributes attributes;
@@ -446,16 +457,14 @@ int list_local_stuff(char path[]){
   dir = opendir(path);
   if(!dir){
     perror("Cannot open directory");
-    return (int) perror;
+    return errno;
   }
   //print title
   //printf("Name                       Size Perms ModTime Type\n");
   printf("Name\t\t\t\tType\n");
-  //struct DIRENT* attrib = (struct DIRENT*) readdir(dir);{
   while( (attrib = readdir(dir)) != NULL){
     //later on see if the "." filter is needed.
     //print the entry
-    //    char* name = attrib->dname;
     //printf("%-20s #1011u %.80 %d %d\n",
         printf("%s\t\t%d\n",
     	   attrib -> d_name,
@@ -465,7 +474,7 @@ int list_local_stuff(char path[]){
     }
   if( closedir(dir) != 0 ){
     perror("Cannot close directory.");
-    return (int) perror;
+    return errno;
   }
   return 0;
 }
