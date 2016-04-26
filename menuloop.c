@@ -5,19 +5,19 @@
 //#include <libssh.h>
 //#include <sftp.h>
 //to move to new file
+#include <dirent.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <sys/types.h>
 #define BUFFER_SIZE 1000
 
-#include <dirent.h>
-#include <sys/types.h>
 int push_single(char local[], char remote[], char fname[], ssh_session sshses,sftp_session sftpses);
 int pull_single(char local[], char remote[], char fname[], ssh_session sshses,sftp_session sftpses);
 int do_command(char command[], ssh_session myssh);
 int pull_all_files(char pathl[], char pathr[], ssh_session sshses, sftp_session sftpses);
 int list_remote_stuff(char path[], ssh_session sshses, sftp_session sftpses);
 int change_remote_directory(char remote[], char dirname[], ssh_session sshses, sftp_session sftpses);
-int push_all_files(char pathl,char pathr,ssh_session sshses, sftp_session sftpses);
+int push_all_files(char pathl[],char pathr[],ssh_session sshses, sftp_session sftpses);
 
 
 char* help = "Commands:\nexit\t quit\nhelp\t this help message\ndispl\t display local path (if not home)\ndispr\t display remote path (if not home)\ncdl\t change  local path\ncdr\t change remote path\npushs\t push single file\npulls\t pull single file\nrun\t execute frequent command\nlsr\t list remote stuff\nccom\t change frequently used command\n";
@@ -247,8 +247,11 @@ int do_command(char command[],ssh_session myssh){
   int rc;
   char buffer[256];
   int nbytes;
+  //pre-pend this to force remote encoding to be compatible with
+  //local terminal encoding
   char encoding[500] = "LC_ALL=C LANG=C ";
   strcat(encoding, command);
+  //create channel to put command onto
   channel = ssh_channel_new(myssh);
   if (channel == NULL)
     return SSH_ERROR;
@@ -258,6 +261,7 @@ int do_command(char command[],ssh_session myssh){
       ssh_channel_free(channel);
       return rc;
     }
+  //execute remote command
   rc = ssh_channel_request_exec(channel, encoding);
   if (rc != SSH_OK)
     {
@@ -265,6 +269,7 @@ int do_command(char command[],ssh_session myssh){
       ssh_channel_free(channel);
       return rc;
     }
+  //read loop for remote stdout
   nbytes = ssh_channel_read(channel, buffer, sizeof(buffer), 0);
   while( nbytes > 0)
     {
@@ -282,6 +287,7 @@ int do_command(char command[],ssh_session myssh){
       ssh_channel_free(channel);
       return SSH_ERROR;
     }
+  //read loop for remote stderr
   nbytes = ssh_channel_read(channel, buffer, sizeof(buffer), 1);
   while( nbytes > 0)
     {
@@ -299,6 +305,7 @@ int do_command(char command[],ssh_session myssh){
       ssh_channel_free(channel);
       return SSH_ERROR;
     }
+  //clean up
   ssh_channel_send_eof(channel);
   ssh_channel_close(channel);
   ssh_channel_free(channel);
@@ -309,8 +316,9 @@ int pull_all_files(char pathl[],char pathr[], ssh_session sshses, sftp_session s
   sftp_dir dir;
   sftp_attributes attributes;
   int rc;
-  int filecount = 0;
-  int foldercount = 0;
+  int filecount = 0; // count of files
+  int foldercount = 0;// count of folders
+  //attempt to open remote directory
   dir = sftp_opendir(sftpses, pathr);
   //dir = sftp_opendir(sftpses, ".");
   if (!dir)
@@ -319,17 +327,23 @@ int pull_all_files(char pathl[],char pathr[], ssh_session sshses, sftp_session s
             ssh_get_error(sshses));
     return SSH_ERROR;
   }
+  //loop through each entry of the directory
   while ((attributes = sftp_readdir(sftpses, dir)) != NULL)
     {
+      //skip stuff that begins with '.' as it is hidden files
       if('.' == attributes->name[0])
 	continue;
+      //2 is the type correspoinding to folders
       if(2 == attributes->type){
 	foldercount ++;
+	//do not move folders
 	continue;
       }
+      //pull the file and increase count for each success
       if(SSH_OK == pull_single(pathl, pathr,attributes->name, sshses, sftpses))
 	filecount ++;
     }
+  //handle bad things
   if (!sftp_dir_eof(dir))
     {
       fprintf(stderr, "Can't list directory: %s\n",
@@ -337,6 +351,8 @@ int pull_all_files(char pathl[],char pathr[], ssh_session sshses, sftp_session s
       sftp_closedir(dir);
       return SSH_ERROR;
     }
+  //place report before closing so a failed close still tells what was moved
+  printf("Pulled %d files.  Skipped %d folders.",filecount,foldercount);
   rc = sftp_closedir(dir);
   if (rc != SSH_OK)
     {
@@ -344,14 +360,44 @@ int pull_all_files(char pathl[],char pathr[], ssh_session sshses, sftp_session s
 	      ssh_get_error(sshses));
       return rc;
     }
-  printf("Pulled %d files.  Skipped %d folders.",filecount,foldercount);
+ 
   return 0;
 }
-/*int push_all_files(char pathl[], char pathr[], ssh_session sshses, sftp_session sftpses)
+/*
+int push_all_files(char pathl[], char pathr[], ssh_session sshses, sftp_session sftpses)
 {
+  DIR* dirr;
+  DIRENT* attrib;
+  int rc;
+  int filecount = 0;
+  int foldercount = 0;
+  //attempt to opel local directory
+  dirr = opendir(pathl);
+  if(NULL == dirr){
+    perror("Cannot open local directory.");
+    return errno;
+  }
+  //loop through each entry of the directory
+  while( (attrib = readdir( dirr)) != NULL)
+    {
+      //later on see if the "." filter is needed
+      //skip all but regular files
+      if( attrib->d_type != DT_REG ){
+	foldercount ++;
+	continue;
+      }
+      if(SSH_OK == push_single(pathl, pathr, attrib.d_name,sshses, sftpses) )
+	filecount ++;
+    }
+  //place report before closing so a failed close still tells what was moved
+  printf("Pushed %d regular files.  Skipped %d others.",filecount,foldercount);
+  if( 0 != closedir(dirr) ){
+    perror("Cannot close directory.");
+    return perror;
+  }
+  return 0;
+}
 */
-
-
 int list_remote_stuff(char path[], ssh_session sshses, sftp_session sftpses){
   sftp_dir dir;
   sftp_attributes attributes;
@@ -373,9 +419,9 @@ int list_remote_stuff(char path[], ssh_session sshses, sftp_session sftpses){
     printf("%-20s %10llu %.8o %d %d\n",
      attributes->name,
      (long long unsigned int) attributes->size,
-	   attributes->permissions,
+	   attributes-> permissions,
 	   attributes-> mtime,
-	   attributes->type);
+	   attributes-> type);
      sftp_attributes_free(attributes);
   }
   if (!sftp_dir_eof(dir))
@@ -395,11 +441,42 @@ int list_remote_stuff(char path[], ssh_session sshses, sftp_session sftpses){
   return 0;
 }
 
+int list_local_stuff(char path[]){
+  DIR* dir;
+  struct DIRENT* attrib;
+  //attempt to open directory
+  dir = opendir(path);
+  if(!dir){
+    perror("Cannot open directory");
+    return perror;
+  }
+  //print title
+  //printf("Name                       Size Perms ModTime Type\n");
+  printf("Name\t\t\t\tType\n");
+  //struct DIRENT* attrib = (struct DIRENT*) readdir(dir);{
+  while( (attrib =(struct DIRENT*) readdir(dir)) != NULL){
+    //later on see if the "." filter is needed.
+    //print the entry
+    //    char* name = attrib->dname;
+    //printf("%-20s #1011u %.80 %d %d\n",
+    //    printf("%s\t\t%d\n",
+    //	   attrib -> d_name,
+    //	   attrib -> d_type
+	   //use stat???
+    //	   );
+    }
+  if( closedir(dir) != 0 ){
+    perror("Cannot close directory.");
+    return (int) perror;
+  }
+  return 0;
+}
+
 int change_remote_directory(char remote[], char dirname[], ssh_session sshses, sftp_session sftpses){
   sftp_dir dir;
   int rc;
   char *p;
-  
+  //when the new directory is "..", trim the existing path
   if (strcmp("..", dirname) == 0) {
     p = strrchr(remote, (int) '/');
     if (p != NULL) {
@@ -428,7 +505,8 @@ int change_remote_directory(char remote[], char dirname[], ssh_session sshses, s
               ssh_get_error(sshses));
       return rc;
     }
-    
+    //when not returned by failures to open directory,
+    //write the new path over the old one.
     strcpy(remote, rdirpath);
   }
   return 0;
