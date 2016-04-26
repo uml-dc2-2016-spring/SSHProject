@@ -457,11 +457,19 @@ int list_local_stuff(char path[]){
     //print the entry
     //    char* name = attrib->dname;
     //printf("%-20s #1011u %.80 %d %d\n",
-        printf("%s\t\t%d\n",
-    	   attrib -> d_name,
-    	   attrib -> d_type
+    //    printf("%-20s\t\t%x\n",
+    //	   attrib -> d_name,
+    //	   attrib -> d_type
 	   //use stat???
-    	   );
+    //	   );
+        printf("%-20s\t\t", attrib->d_name);
+        if (attrib -> d_type == DT_REG) {
+            printf("file\n");
+        } else if (attrib -> d_type == DT_DIR) {
+            printf("folder\n");
+        } else {
+            printf("%x\n", attrib -> d_type);
+        }
     }
   if( closedir(dir) != 0 ){
     perror("Cannot close directory.");
