@@ -18,9 +18,9 @@ int pull_all_files(char pathl[], char pathr[], ssh_session sshses, sftp_session 
 int list_remote_stuff(char path[], ssh_session sshses, sftp_session sftpses);
 int change_remote_directory(char remote[], char dirname[], ssh_session sshses, sftp_session sftpses);
 int push_all_files(char pathl[],char pathr[],ssh_session sshses, sftp_session sftpses);
+int list_local_stuff(char pathl[]);
 
-
-char* help = "Commands:\nexit\t quit\nhelp\t this help message\ndispl\t display local path (if not home)\ndispr\t display remote path (if not home)\ncdl\t change  local path\ncdr\t change remote path\npushs\t push single file\npulls\t pull single file\nrun\t execute frequent command\nlsr\t list remote stuff\nccom\t change frequently used command\n";
+char* help = "Commands:\nexit\t quit\nhelp\t this help message\ndispl\t display local path (if not home)\ndispr\t display remote path (if not home)\ncdl\t change  local path\ncdr\t change remote path\npushs\t push single file\npulls\t pull single file\nrun\t execute frequent command\nlsr\t list remote stuff\nlsl\t list stuff local\npulla\t pull all regular files\npusha\t push all regular files\n";
 
 char* welcome = "Welcome to SSHProject.  'help' for help.\n";
 
@@ -106,10 +106,8 @@ int menuloop(char name[100], char pass[100],ssh_session myssh,sftp_session mysft
     case 9:
       list_remote_stuff(remote,myssh,mysftp);
       break;
-    case 10: //change command
-      printf("Enter new command. %s",prompt);
-      scanf(" %[^\n]s",command);
-      printf("New command is: %s",command);
+    case 10: //list stuff local
+      list_local_stuff(local);
       break;
     case 11: //pull all files from path remote to path local
       printf("Pulling all files from %s to %s.",remote,local);
@@ -129,7 +127,7 @@ int menuloop(char name[100], char pass[100],ssh_session myssh,sftp_session mysft
 
 //for parsing user input
 #define NUMWORDS 12
-char* words[NUMWORDS] = {"exit","help","displ","dispr","cdl","cdr","pushs","pulls","run","lsr","ccom","pulla"};
+char* words[NUMWORDS] = {"exit","help","displ","dispr","cdl","cdr","pushs","pulls","run","lsr","lsl","pulla"};
 
 int parse(char* input,ssh_session myses){
   //make sure our session is still open
@@ -443,27 +441,27 @@ int list_remote_stuff(char path[], ssh_session sshses, sftp_session sftpses){
 
 int list_local_stuff(char path[]){
   DIR* dir;
-  struct DIRENT* attrib;
+  struct dirent* attrib;
   //attempt to open directory
   dir = opendir(path);
   if(!dir){
     perror("Cannot open directory");
-    return perror;
+    return (int) perror;
   }
   //print title
   //printf("Name                       Size Perms ModTime Type\n");
   printf("Name\t\t\t\tType\n");
   //struct DIRENT* attrib = (struct DIRENT*) readdir(dir);{
-  while( (attrib =(struct DIRENT*) readdir(dir)) != NULL){
+  while( (attrib = readdir(dir)) != NULL){
     //later on see if the "." filter is needed.
     //print the entry
     //    char* name = attrib->dname;
     //printf("%-20s #1011u %.80 %d %d\n",
-    //    printf("%s\t\t%d\n",
-    //	   attrib -> d_name,
-    //	   attrib -> d_type
+        printf("%s\t\t%d\n",
+    	   attrib -> d_name,
+    	   attrib -> d_type
 	   //use stat???
-    //	   );
+    	   );
     }
   if( closedir(dir) != 0 ){
     perror("Cannot close directory.");
