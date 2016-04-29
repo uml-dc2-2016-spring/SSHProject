@@ -1,9 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-//#include "SFTPencaps.c"
-//#include "SSHencaps.c"
-//#include "conntest.c"
 #include "menuloop.c"
 
 int auth_ssh(char name[],char pass[],ssh_session* new_ses);
@@ -15,9 +12,6 @@ int main(){
   int rc;
   char name[100];//name@remote.domain
   char pass[100];//password
-  char command[100];//commonly used command
-  //char local[200];//path other than current working dir
-  //char remote[200];//path other than current working dir
 
   // Open session and set options
   ssh_session myssh;
@@ -96,36 +90,8 @@ int main(){
   return 0;
 }
 
-
-int auth_ssh(char name[],char pass[],ssh_session* new_ses){
-  int rc = 0;
-  /*
-  *new_ses = ssh_new();
-  ssh_options_set(*new_ses, SSH_OPTIONS_HOST, name);
-  rc = ssh_userauth_password(*new_ses, NULL, pass);
-  
-  if (rc != SSH_AUTH_SUCCESS) {
-    fprintf(stderr, "Error authenticating with password: %s\n",
-            ssh_get_error(*new_ses));
-    ssh_disconnect(*new_ses);
-    ssh_free(&new_ses);
-    exit(-1);
-  }
-  */
-  return rc;
-}
-
 int verify_knownhost(ssh_session session)
 {
-  /*int state, hlen;
-  unsigned char *hash = NULL;
-  char *hexa;
-  char buf[10];
-  state = ssh_is_server_known(session);
-  //ssh_get_publickey_hash();
-  hlen = ssh_get_pubkey_hash(session, &hash);
-  if (hlen < 0)
-    return -1;*/
   char *hexa;
   int state;
   char buf[10];
