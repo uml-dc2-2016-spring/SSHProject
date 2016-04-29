@@ -2,8 +2,7 @@
 #include <string.h>
 #include <libssh/libssh.h>
 #include <libssh/sftp.h>
-//#include <libssh.h>
-//#include <sftp.h>
+
 //to move to new file
 #include <dirent.h>
 #include <sys/stat.h>
@@ -37,14 +36,7 @@ int menuloop(char name[100], char pass[100],ssh_session myssh,sftp_session mysft
   
   printf("%s %s",welcome, prompt);
 
-
-  //0 exit
-  //-1 error
-  //1 help
-  //2 print local
-  //3 print remote
-  //4 change local
-  //5 change remote
+  //here is the menu loop
   scanf("%s", comm);
 
   while( 0 != parse(comm,myssh) ){
@@ -52,7 +44,7 @@ int menuloop(char name[100], char pass[100],ssh_session myssh,sftp_session mysft
     case 0:
       return 0;
       break;
-    case -1:
+    case -1: //typos and accidents
       printf("Not recognized %s",prompt);
       break;
     case 1: //display help
@@ -96,15 +88,15 @@ int menuloop(char name[100], char pass[100],ssh_session myssh,sftp_session mysft
       else
 	printf("Pull success\n");
       break;
-    case 8: // run command on remote
-      printf("Enter commonly used command\n> ");
+    case 8: // run single command on remote
+      //printf("Enter commonly used command\n> ");
       scanf(" %[^\n]s",command);
       if( SSH_OK != do_command(command,myssh) )
       	printf("run error\n");
-      else
-	printf("Run success");
+      /*else
+	printf("Run success");*/
       break;
-    case 9:
+    case 9: // list remot stuff
       list_remote_stuff(remote,myssh,mysftp);
       break;
     case 10: //list stuff local
@@ -123,18 +115,19 @@ int menuloop(char name[100], char pass[100],ssh_session myssh,sftp_session mysft
       else
 	printf("Failure");
       break;
-    default:
+    default: // errors. Normal operation should not get here.
       printf("oops");
       return -1;
     }
-    
+    //print prompt and get next command
     printf("%s",prompt);
     scanf("%s",comm);
   }
   return 0;
 }
+//end of menu loop
 
-//for parsing user input
+//for parsing user input:
 #define NUMWORDS 13
 char* words[NUMWORDS] = {"exit", "help", "displ", "dispr", "cdl", "cdr", "pushs", "pulls", "run", "lsr", "lsl", "pulla", "pusha"};
 
@@ -156,6 +149,7 @@ int parse(char* input,ssh_session myses){
   return -1;
 }
 
+//below are all operations
 
 int push_single(char local[],char remote[],char fname[],ssh_session sshses,sftp_session sftpses){
   sftp_file rfile;
@@ -412,7 +406,6 @@ int list_remote_stuff(char path[], ssh_session sshses, sftp_session sftpses){
   sftp_attributes attributes;
   int rc;
   dir = sftp_opendir(sftpses, path);
-  //dir = sftp_opendir(sftpses, ".");
   if (!dir)
   {
     fprintf(stderr, "Directory not opened: %s\n",
