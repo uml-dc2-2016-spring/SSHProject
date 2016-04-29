@@ -77,7 +77,7 @@ int menuloop(char name[100], char pass[100],ssh_session myssh,sftp_session mysft
       printf("\n Enter a directory: %s", prompt);
       scanf("%s",fname);
       if( SSH_OK != change_remote_directory(remote, fname, myssh, mysftp) )
-        printf("Path changed successfully\n");
+        printf("Path not changed\n");
       printf("New remote: %s", remote);
       break;
     case 6: //push single
@@ -97,12 +97,12 @@ int menuloop(char name[100], char pass[100],ssh_session myssh,sftp_session mysft
 	printf("Pull success\n");
       break;
     case 8: // run command on remote
-      printf("Enter commonly used command\n> ");
+      printf("Enter command\n> ");
       scanf(" %[^\n]s",command);
       if( SSH_OK != do_command(command,myssh) )
       	printf("run error\n");
-      else
-	printf("Run success");
+    //  else
+	//printf("Run success");
       break;
     case 9:
       list_remote_stuff(remote,myssh,mysftp);
