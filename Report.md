@@ -8,6 +8,10 @@ This service is not limited to the CS server.  You can login to any machine runn
 
 # Project Design
 
+insert picture here
+
+
+
 # File Structure
 
 - Our files:
