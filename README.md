@@ -1,11 +1,16 @@
 # SSHProject
-A simple minimal cloud service interface over ssh to combine file transfer and 
+A simple minimal cloud service interface over ssh to combine file transfer and remote command execution.
 
 
 # Contributors
 - Martin Jaffer
 - Andrew Gabriel
 
+# Progress thru (4/28/2016)
+- Discovered command execution is incompatible with pathing.  Fix WIP in branch pty.
+- Code clean up, user interface tweaks.
+- Presentation happen!
+- Fixed character encoding compatability issues.
 
 # Completed Progress (4/21/2016)
 - Fixed & Functional remote command execution result reading (stderr + stdin)
