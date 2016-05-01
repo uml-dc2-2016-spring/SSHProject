@@ -1,7 +1,7 @@
 # SSHProject
 A simple minimal cloud service interface over ssh to combine file transfer and remote command execution.
 
-A recording of SSHProject working can be found in this reopsitory as video-demo.avi.
+A recording of SSHProject working can be found in this reopsitory as demo-video.avi.
 
 # Contributors
 - Martin Jaffer
