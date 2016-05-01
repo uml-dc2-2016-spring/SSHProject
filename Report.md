@@ -8,7 +8,7 @@ This service is not limited to the CS server.  You can login to any machine runn
 
 # Project Design
 
-+![](https://github.com/uml-dc2-2016-spring/SSHProject/blob/master/project-flow.png?raw=true)
+![](https://github.com/uml-dc2-2016-spring/SSHProject/blob/master/project-flow.png?raw=true)
 
 Menuloop.c:
 
@@ -26,22 +26,34 @@ This function is called when we want to push a single file.  Local is the local 
 This function opens the local folder indicated by pathl and iterates through each item.  If the item begins with '.', it is skipped.
 If the item is not a regular files it is skipped.  All regular files are pushed by a call to push_single.  Once the iteration is finished, the number of transferred files and the number of skipped items is printed.  Then the folder is closed.  We chose to close the folder after listing the number of transfered and skipped items, not before, so that even if there is an error in closing the folder, we still know whether there was a transfer.
 
+- list_remote_stuff(char path[], ssh_session sshses, sftp_session sftpses)
 
+This function is passed the current remote path. It uses the function sftp_opendir to open the current remote directory and uses sftp_readdir to go through and print out information about each item in the directory. 
+
+
+- list_local_stuff(char pathl[])
+
+This function uses only the current local path and thus does not need the ssh or sftp sessions. It uses opendir to open the local directory and readdir to go through and print out information about each item in the directory. It was necessary to use the dirent struct, provided by dirent.h, for this function.
+
+
+- change_remote_directory(char remote[], char dirname[], ssh_session sshses, sftp_session sftpses)
+
+The purpose of this function is to change the current directory on the remote server. Remote is the current remote path, passed by refference, and dirname should be the name of a directory in the current remote directory. When the directory entered is "..", the function strrchr is used to find the last slash character in the current path and replace it with '\0', effectively removing the current directory from the path. Otherwise, it appends the entered directory to the end of the current remote path. 
 
 # File Structure
 
-- Our files:
+Our files:
 
-main.c - Contains connection setup.  #includes menuloop.c
+- main.c - Contains connection setup.  #includes menuloop.c
 
-menuloop.c - Contains the menu loop and all the functions called by said loop.
+- menuloop.c - Contains the menu loop and all the functions called by said loop.
 
-readme.md - synopsis and weekly updates
+- readme.md - synopsis and weekly updates
 
-- Other files:
+Other files:
 
-ssh.dll - required for execution
+- ssh.dll - required for execution
 
-libeay32.dll
+- libeay32.dll
 
-libssh/headers - needed for compiling
+- libssh/headers - needed for compiling
