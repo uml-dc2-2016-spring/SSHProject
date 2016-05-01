@@ -45,7 +45,7 @@ Menuloop.c:
 - __Change_local_directory(char local[], char dirname[])__  
     This function is like change_remote_directory except that it is used for the local directory. 
 
-- __Do_command(char command[], ssh)session myssh)
+- __Do_command(char command[], ssh)session myssh)__
     This function is for executing a single remote command.  It requests a new channel, and executes the given command on it.  Then reads everything on the stdout subchannel , and then reads everything on the stderr subchannel.  If all goes well it sends EOF and closes the channel.  Only one command execution can be used on the channel in this method.  Multiple will result in error.  See branch pty for an alternative.
 
 - __Other commands__  
