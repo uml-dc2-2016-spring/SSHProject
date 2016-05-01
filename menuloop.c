@@ -27,7 +27,6 @@ char* welcome = "Welcome to SSHProject.  'help' for help.\n";
 char* prompt = "\n> ";
 
 int menuloop(char name[100], char pass[100],ssh_session myssh,sftp_session mysftp){
-  //int menuloop(char name[100], char pass[100]){
   char comm[100];
   char fname[100];
   char local[200] = ".";//replace with DEFAULT_PATH
@@ -319,7 +318,6 @@ int pull_all_files(char pathl[],char pathr[], ssh_session sshses, sftp_session s
   int foldercount = 0;// count of folders
   //attempt to open remote directory
   dir = sftp_opendir(sftpses, pathr);
-  //dir = sftp_opendir(sftpses, ".");
   if (!dir)
   {
     fprintf(stderr, "Directory not opened: %s\n",
@@ -454,14 +452,6 @@ int list_local_stuff(char path[]){
   //printf("Name                       Size Perms ModTime Type\n");
   printf("Name\t\t\t\tType\n");
   while( (attrib = readdir(dir)) != NULL){
-    //later on see if the "." filter is needed.
-    //print the entry
-    //printf("%-20s #1011u %.80 %d %d\n",
-    //    printf("%-20s\t\t%x\n",
-    //	   attrib -> d_name,
-    //	   attrib -> d_type
-	   //use stat???
-    //	   );
         printf("%-20s\t\t", attrib->d_name);
         if (attrib -> d_type == DT_REG) {
             printf("file\n");
