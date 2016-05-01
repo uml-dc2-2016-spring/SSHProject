@@ -42,7 +42,7 @@ This function uses only the current local path and thus does not need the ssh or
 
 __change_remote_directory(char remote[], char dirname[], ssh_session sshses, sftp_session sftpses)__
 
-> The purpose of this function is to change the current directory on the remote server. Remote is the current remote path, passed by refference, and dirname should be the name of a directory in the current remote directory. When the directory entered is "..", the function strrchr is used to find the last slash character in the current path and replace it with '\0', effectively removing the current directory from the path. Otherwise, it appends the entered directory to the end of the current remote path. 
+   The purpose of this function is to change the current directory on the remote server. Remote is the current remote path, passed by refference, and dirname should be the name of a directory in the current remote directory. When the directory entered is "..", the function strrchr is used to find the last slash character in the current path and replace it with '\0', effectively removing the current directory from the path. Otherwise, it appends the entered directory to the end of the current remote path. 
 
 # File Structure
 
