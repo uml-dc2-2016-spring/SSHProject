@@ -10,7 +10,10 @@ This service is not limited to the CS server.  You can login to any machine runn
 
 insert picture here
 
+Menuloop.c:
 
+- Parse(char* input, ssh_session mysess)
+- Pushs
 
 # File Structure
 
