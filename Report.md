@@ -11,8 +11,10 @@ This service is not limited to the CS server.  You can login to any machine runn
 ![](https://github.com/uml-dc2-2016-spring/SSHProject/blob/master/project-flow.png?raw=true)
 
 We split the project into three parts:  Managing the overall connection, interpreting user commands, and acting on that connection.  The latter two somehow ended up sharing the same file.
-There were two options for file transfer, SCP and SFTP.  
-The ssh_session is used for authentication, requesting new channels, and reading errors.  The ssh_session is used to create the sftp_session (sftp channel).  The sftp channel is used for remote directory listing and file reading and writing.  We expected the sftp to be used multiple times per program run, so we opted to create one sftp channel and leave it open for the duration of the run.  No sense in repeatedly opening and closing channels.
+
+There were two options for file transfer, SCP and SFTP.    On investigation, SCP looked awkward, and SFTP had more functionality we wanted.  So we chose SFTP despite the original proposal declaring use of SCP.  I did not know SFTP was an opption over SSH during proposal writing.
+
+The ssh_session is used for authentication, requesting new channels, and reading errors.  The ssh_session is used to create the sftp_session (sftp channel).  The sftp channel is used for remote directory listing and file reading and writing.  We expected the sftp to be used multiple times per program run, so we opted to create one sftp channel and leave it open for the duration of the run.  No sense in repeatedly opening and closing channels.  The exception can be found in Do_command below.
 
 Menuloop.c:
 
