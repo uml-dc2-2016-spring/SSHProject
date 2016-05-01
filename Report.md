@@ -8,12 +8,25 @@ This service is not limited to the CS server.  You can login to any machine runn
 
 # Project Design
 
-![](https://github.com/uml-dc2-2016-spring/SSHProject/blob/master/project-flow.png?raw=true)
+
 
 Menuloop.c:
 
 - Parse(char* input, ssh_session mysess)
-- Pushs
+
+This function does two things.  First it checks whether the session is still connected.  If not, returns a value 0, the exit case.
+Second it iterates through the array of recognized commands and returns the index.  The index is used in a switch statement in menuloop.  -1 when the input is not recognized.
+
+- Push_single(char[] local, char remote[], char filename[], ssh_session sshses, sftp_session sftpses)
+
+This function is called when we want to push a single file.  Local is the local path, remote is the remote path.  Filename is used both to find the source file and name the remote file to create or overwrite.  The file is opened locally, and read into the sftp channel.  Failure to read or write will print an error message and return an error code.
+
+- Push_all_files(char pathl[], char pathr[], ssh_session sshses, sftp_session sftpses)
+
+This function opens the local folder indicated by pathl and iterates through each item.  If the item begins with '.', it is skipped.
+If the item is not a regular files it is skipped.  All regular files are pushed by a call to push_single.  Once the iteration is finished, the number of transferred files and the number of skipped items is printed.  Then the folder is closed.  We chose to close the folder after listing the number of transfered and skipped items, not before, so that even if there is an error in closing the folder, we still know whether there was a transfer.
+
+
 
 # File Structure
 
