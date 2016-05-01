@@ -8,7 +8,7 @@ This service is not limited to the CS server.  You can login to any machine runn
 
 # Project Design
 
-
++![](https://github.com/uml-dc2-2016-spring/SSHProject/blob/master/project-flow.png?raw=true)
 
 Menuloop.c:
 
